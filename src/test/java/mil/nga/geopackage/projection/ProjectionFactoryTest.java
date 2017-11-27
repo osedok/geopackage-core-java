@@ -56,14 +56,14 @@ public class ProjectionFactoryTest {
 				
 		String compoundWkt = "COMPOUNDCRS[“WGS84 Height (EGM08)”,FIRST,SECOND,ID[“NSG”,”8101 ”]]";
 				
-		Projection manual1 = ProjectionFactory.getProjection(ProjectionConstants.AUTHORITY_EPSG, 12345, null,
-				wkt1);
-		
-		Projection manual2 = ProjectionFactory.getProjection(ProjectionConstants.AUTHORITY_EPSG, 12346, null,
-				wkt2);
-		
-		Projection compound = ProjectionFactory.getProjection(ProjectionConstants.AUTHORITY_EPSG, 12347, null,
-				compoundWkt);
+//		Projection manual1 = ProjectionFactory.getProjection(ProjectionConstants.AUTHORITY_EPSG, 12345, null,
+//				wkt1);
+//		
+//		Projection manual2 = ProjectionFactory.getProjection(ProjectionConstants.AUTHORITY_EPSG, 12346, null,
+//				wkt2);
+//		
+//		Projection compound = ProjectionFactory.getProjection(ProjectionConstants.AUTHORITY_EPSG, 12347, null,
+//				compoundWkt);
 		
 	}
 	
