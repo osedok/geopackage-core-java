@@ -1,11 +1,7 @@
 package mil.nga.geopackage.user.custom;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import mil.nga.geopackage.user.UserTable;
 
@@ -41,42 +37,70 @@ public class UserCustomTable extends UserTable<UserCustomColumn> {
 	 */
 	public UserCustomTable(String tableName, List<UserCustomColumn> columns,
 			Collection<String> requiredColumns) {
-		super(tableName, columns);
-
-		if (requiredColumns != null && !requiredColumns.isEmpty()) {
-
-			Set<String> search = new HashSet<>(requiredColumns);
-			Map<String, Integer> found = new HashMap<>();
-
-			// Find the required columns
-			for (UserCustomColumn column : columns) {
-
-				String columnName = column.getName();
-				int columnIndex = column.getIndex();
-
-				if (search.contains(columnName)) {
-					Integer previousIndex = found.get(columnName);
-					duplicateCheck(columnIndex, previousIndex, columnName);
-					found.put(columnName, columnIndex);
-				}
-			}
-
-			// Verify the required columns were found
-			for (String requiredColumn : search) {
-				missingCheck(found.get(requiredColumn), requiredColumn);
-			}
-		}
-
+		this(new UserCustomColumns(tableName, columns, requiredColumns));
 	}
 
 	/**
 	 * Constructor
+	 * 
+	 * @param columns
+	 *            columns
+	 * @since 3.5.0
+	 */
+	public UserCustomTable(UserCustomColumns columns) {
+		super(columns);
+	}
+
+	/**
+	 * Copy Constructor
 	 * 
 	 * @param userCustomTable
 	 *            user custom table
 	 */
 	public UserCustomTable(UserCustomTable userCustomTable) {
 		super(userCustomTable);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public UserCustomTable copy() {
+		return new UserCustomTable(this);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public String getDataType() {
+		return getDataType(null);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public UserCustomColumns getUserColumns() {
+		return (UserCustomColumns) super.getUserColumns();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public UserCustomColumns createUserColumns(List<UserCustomColumn> columns) {
+		return new UserCustomColumns(getTableName(), columns,
+				getRequiredColumns(), true);
+	}
+
+	/**
+	 * Get the required columns
+	 * 
+	 * @return required columns
+	 */
+	public Collection<String> getRequiredColumns() {
+		return getUserColumns().getRequiredColumns();
 	}
 
 }

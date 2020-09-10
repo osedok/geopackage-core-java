@@ -4,21 +4,48 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import mil.nga.geopackage.schema.TableColumnKey;
-
-import com.j256.ormlite.dao.BaseDaoImpl;
 import com.j256.ormlite.stmt.PreparedQuery;
 import com.j256.ormlite.stmt.QueryBuilder;
+import com.j256.ormlite.stmt.Where;
 import com.j256.ormlite.support.ConnectionSource;
+
+import mil.nga.geopackage.GeoPackageCore;
+import mil.nga.geopackage.db.GeoPackageCoreConnection;
+import mil.nga.geopackage.db.GeoPackageDao;
 
 /**
  * Extended Relations Data Access Object
  * 
  * @author jyutzler
+ * @author osbornb
  * @since 3.0.1
  */
-public class ExtendedRelationsDao extends
-		BaseDaoImpl<ExtendedRelation, TableColumnKey> {
+public class ExtendedRelationsDao
+		extends GeoPackageDao<ExtendedRelation, Long> {
+
+	/**
+	 * Create the DAO
+	 * 
+	 * @param geoPackage
+	 *            GeoPackage
+	 * @return dao
+	 * @since 4.0.0
+	 */
+	public static ExtendedRelationsDao create(GeoPackageCore geoPackage) {
+		return create(geoPackage.getDatabase());
+	}
+
+	/**
+	 * Create the DAO
+	 * 
+	 * @param db
+	 *            database connection
+	 * @return dao
+	 * @since 4.0.0
+	 */
+	public static ExtendedRelationsDao create(GeoPackageCoreConnection db) {
+		return GeoPackageDao.createDao(db, ExtendedRelation.class);
+	}
 
 	/**
 	 * Constructor, required by ORMLite
@@ -114,12 +141,97 @@ public class ExtendedRelationsDao extends
 	public List<ExtendedRelation> getTableRelations(String table)
 			throws SQLException {
 
-		QueryBuilder<ExtendedRelation, TableColumnKey> qb = queryBuilder();
+		QueryBuilder<ExtendedRelation, Long> qb = queryBuilder();
 		qb.where().like(ExtendedRelation.COLUMN_BASE_TABLE_NAME, table).or()
 				.like(ExtendedRelation.COLUMN_RELATED_TABLE_NAME, table);
 		PreparedQuery<ExtendedRelation> preparedQuery = qb.prepare();
 
 		return query(preparedQuery);
+	}
+
+	/**
+	 * Get the relations matching the non null provided values
+	 * 
+	 * @param baseTable
+	 *            base table name
+	 * @param baseColumn
+	 *            base primary column name
+	 * @param relatedTable
+	 *            related table name
+	 * @param relatedColumn
+	 *            related primary column name
+	 * @param relation
+	 *            relation name
+	 * @param mappingTable
+	 *            mapping table name
+	 * @return extended relations
+	 * @throws SQLException
+	 *             upon failure
+	 * @since 3.2.0
+	 */
+	public List<ExtendedRelation> getRelations(String baseTable,
+			String baseColumn, String relatedTable, String relatedColumn,
+			String relation, String mappingTable) throws SQLException {
+
+		QueryBuilder<ExtendedRelation, Long> qb = queryBuilder();
+		Where<ExtendedRelation, Long> where = null;
+
+		if (baseTable != null) {
+			where = addToWhere(qb, where);
+			where.like(ExtendedRelation.COLUMN_BASE_TABLE_NAME, baseTable);
+		}
+
+		if (baseColumn != null) {
+			where = addToWhere(qb, where);
+			where.like(ExtendedRelation.COLUMN_BASE_PRIMARY_COLUMN, baseColumn);
+		}
+
+		if (relatedTable != null) {
+			where = addToWhere(qb, where);
+			where.like(ExtendedRelation.COLUMN_RELATED_TABLE_NAME,
+					relatedTable);
+		}
+
+		if (relatedColumn != null) {
+			where = addToWhere(qb, where);
+			where.like(ExtendedRelation.COLUMN_RELATED_PRIMARY_COLUMN,
+					relatedColumn);
+		}
+
+		if (relation != null) {
+			where = addToWhere(qb, where);
+			where.like(ExtendedRelation.COLUMN_RELATION_NAME, relation);
+		}
+
+		if (mappingTable != null) {
+			where = addToWhere(qb, where);
+			where.like(ExtendedRelation.COLUMN_MAPPING_TABLE_NAME,
+					mappingTable);
+		}
+
+		PreparedQuery<ExtendedRelation> preparedQuery = qb.prepare();
+
+		return query(preparedQuery);
+	}
+
+	/**
+	 * Add to the where clause, either as new or with an and
+	 * 
+	 * @param qb
+	 *            query builder
+	 * @param where
+	 *            where clause
+	 * @return where clause
+	 */
+	private Where<ExtendedRelation, Long> addToWhere(
+			QueryBuilder<ExtendedRelation, Long> qb,
+			Where<ExtendedRelation, Long> where) {
+		if (where == null) {
+			where = qb.where();
+		} else {
+			where.and();
+		}
+		return where;
 	}
 
 }

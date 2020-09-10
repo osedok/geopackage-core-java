@@ -4,11 +4,16 @@ import java.io.Closeable;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import com.j256.ormlite.support.ConnectionSource;
 
 import mil.nga.geopackage.GeoPackageConstants;
 import mil.nga.geopackage.GeoPackageException;
-
-import com.j256.ormlite.support.ConnectionSource;
+import mil.nga.geopackage.db.master.SQLiteMaster;
+import mil.nga.geopackage.db.master.SQLiteMasterType;
+import mil.nga.geopackage.db.table.TableInfo;
 
 /**
  * GeoPackage Connection used to define common functionality within different
@@ -17,6 +22,12 @@ import com.j256.ormlite.support.ConnectionSource;
  * @author osbornb
  */
 public abstract class GeoPackageCoreConnection implements Closeable {
+
+	/**
+	 * Logger
+	 */
+	private static final Logger logger = Logger
+			.getLogger(GeoPackageCoreConnection.class.getName());
 
 	/**
 	 * Connection source
@@ -31,6 +42,17 @@ public abstract class GeoPackageCoreConnection implements Closeable {
 	 */
 	protected GeoPackageCoreConnection(ConnectionSource connectionSource) {
 		this.connectionSource = connectionSource;
+	}
+
+	/**
+	 * Copy Constructor
+	 *
+	 * @param connection
+	 *            connection
+	 * @since 3.4.0
+	 */
+	protected GeoPackageCoreConnection(GeoPackageCoreConnection connection) {
+		this(connection.connectionSource);
 	}
 
 	/**
@@ -51,6 +73,141 @@ public abstract class GeoPackageCoreConnection implements Closeable {
 	public abstract void execSQL(String sql);
 
 	/**
+	 * Begin a transaction
+	 * 
+	 * @since 3.3.0
+	 */
+	public abstract void beginTransaction();
+
+	/**
+	 * End a transaction successfully
+	 * 
+	 * @since 3.3.0
+	 */
+	public void endTransaction() {
+		endTransaction(true);
+	}
+
+	/**
+	 * Fail a transaction
+	 * 
+	 * @since 3.3.0
+	 */
+	public void failTransaction() {
+		endTransaction(false);
+	}
+
+	/**
+	 * End a transaction
+	 * 
+	 * @param successful
+	 *            true if the transaction was successful, false to rollback or
+	 *            not commit
+	 * @since 3.3.0
+	 */
+	public abstract void endTransaction(boolean successful);
+
+	/**
+	 * End a transaction as successful and begin a new transaction
+	 *
+	 * @since 3.3.0
+	 */
+	public void endAndBeginTransaction() {
+		endTransaction();
+		beginTransaction();
+	}
+
+	/**
+	 * Commit changes on the connection
+	 * 
+	 * @since 3.3.0
+	 */
+	public abstract void commit();
+
+	/**
+	 * Determine if currently within a transaction
+	 * 
+	 * @return true if in transaction
+	 * 
+	 * @since 3.3.0
+	 */
+	public abstract boolean inTransaction();
+
+	/**
+	 * If foreign keys is disabled and there are no foreign key violations,
+	 * enables foreign key checks, else logs violations
+	 * 
+	 * @return true if enabled or already enabled, false if foreign key
+	 *         violations and not enabled
+	 * @since 3.3.0
+	 */
+	public boolean enableForeignKeys() {
+		boolean enabled = foreignKeys();
+		if (!enabled) {
+			List<List<Object>> violations = foreignKeyCheck();
+			if (violations.isEmpty()) {
+				foreignKeys(true);
+				enabled = true;
+			} else {
+				for (List<Object> violation : violations) {
+					logger.log(Level.WARNING,
+							"Foreign Key violation. Table: " + violation.get(0)
+									+ ", Row Id: " + violation.get(1)
+									+ ", Referred Table: " + violation.get(2)
+									+ ", FK Index: " + violation.get(3));
+				}
+			}
+		}
+		return enabled;
+	}
+
+	/**
+	 * Query for the foreign keys value
+	 * 
+	 * @return true if enabled, false if disabled
+	 * @since 3.3.0
+	 */
+	public boolean foreignKeys() {
+		return CoreSQLUtils.foreignKeys(this);
+	}
+
+	/**
+	 * Change the foreign keys state
+	 * 
+	 * @param on
+	 *            true to turn on, false to turn off
+	 * @return previous foreign keys value
+	 * @since 3.3.0
+	 */
+	public boolean foreignKeys(boolean on) {
+		return CoreSQLUtils.foreignKeys(this, on);
+	}
+
+	/**
+	 * Perform a foreign key check
+	 * 
+	 * @return empty list if valid or violation errors, 4 column values for each
+	 *         violation. see SQLite PRAGMA foreign_key_check
+	 * @since 3.3.0
+	 */
+	public List<List<Object>> foreignKeyCheck() {
+		return CoreSQLUtils.foreignKeyCheck(this);
+	}
+
+	/**
+	 * Perform a foreign key check
+	 * 
+	 * @param tableName
+	 *            table name
+	 * @return empty list if valid or violation errors, 4 column values for each
+	 *         violation. see SQLite PRAGMA foreign_key_check
+	 * @since 3.3.0
+	 */
+	public List<List<Object>> foreignKeyCheck(String tableName) {
+		return CoreSQLUtils.foreignKeyCheck(this, tableName);
+	}
+
+	/**
 	 * Convenience method for deleting rows in the database.
 	 * 
 	 * @param table
@@ -69,17 +226,126 @@ public abstract class GeoPackageCoreConnection implements Closeable {
 	 * 
 	 * @param table
 	 *            table name
+	 * @return count
+	 * @since 4.0.0
+	 */
+	public int count(String table) {
+		return count(table, null, null);
+	}
+
+	/**
+	 * Get a count of results
+	 * 
+	 * @param table
+	 *            table name
 	 * @param where
 	 *            where clause
 	 * @param args
 	 *            arguments
 	 * @return count
 	 */
-	public abstract int count(String table, String where, String[] args);
+	public int count(String table, String where, String[] args) {
+		return count(table, null, where, args);
+	}
+
+	/**
+	 * Get a count of results
+	 * 
+	 * @param table
+	 *            table name
+	 * @param column
+	 *            column name
+	 * @return count
+	 * @since 4.0.0
+	 */
+	public int count(String table, String column) {
+		return count(table, false, column);
+	}
+
+	/**
+	 * Get a count of results
+	 * 
+	 * @param table
+	 *            table name
+	 * @param distinct
+	 *            distinct column flag
+	 * @param column
+	 *            column name
+	 * @return count
+	 * @since 4.0.0
+	 */
+	public int count(String table, boolean distinct, String column) {
+		return count(table, distinct, column, null, null);
+	}
+
+	/**
+	 * Get a count of results
+	 * 
+	 * @param table
+	 *            table name
+	 * @param column
+	 *            column name
+	 * @param where
+	 *            where clause
+	 * @param args
+	 *            arguments
+	 * @return count
+	 * @since 4.0.0
+	 */
+	public int count(String table, String column, String where, String[] args) {
+		return count(table, false, column, where, args);
+	}
+
+	/**
+	 * Get a count of results
+	 * 
+	 * @param table
+	 *            table name
+	 * @param distinct
+	 *            distinct column flag
+	 * @param column
+	 *            column name
+	 * @param where
+	 *            where clause
+	 * @param args
+	 *            arguments
+	 * @return count
+	 * @since 4.0.0
+	 */
+	public int count(String table, boolean distinct, String column,
+			String where, String[] args) {
+
+		int count = 0;
+		Number value = aggregateFunction("COUNT", table, distinct, column,
+				where, args);
+		if (value != null) {
+			count = value.intValue();
+		}
+
+		return count;
+	}
 
 	/**
 	 * Get the min result of the column
 	 * 
+	 * @param <T>
+	 *            return type
+	 * @param table
+	 *            table name
+	 * @param column
+	 *            column name
+	 * @return min or null
+	 * @since 4.0.0
+	 */
+	public <T> T min(String table, String column) {
+		return min(table, column, null, null);
+	}
+
+	/**
+	 * Get the min result of the column
+	 * 
+	 * @param <T>
+	 *            return type
 	 * @param table
 	 *            table name
 	 * @param column
@@ -89,14 +355,33 @@ public abstract class GeoPackageCoreConnection implements Closeable {
 	 * @param args
 	 *            where arguments
 	 * @return min or null
-	 * @since 1.1.1
+	 * @since 4.0.0
 	 */
-	public abstract Integer min(String table, String column, String where,
-			String[] args);
+	public <T> T min(String table, String column, String where, String[] args) {
+		return aggregateFunction("MIN", table, column, where, args);
+	}
 
 	/**
 	 * Get the max result of the column
 	 * 
+	 * @param <T>
+	 *            return type
+	 * @param table
+	 *            table name
+	 * @param column
+	 *            column name
+	 * @return max or null
+	 * @since 4.0.0
+	 */
+	public <T> T max(String table, String column) {
+		return max(table, column, null, null);
+	}
+
+	/**
+	 * Get the max result of the column
+	 * 
+	 * @param <T>
+	 *            return type
 	 * @param table
 	 *            table name
 	 * @param column
@@ -106,10 +391,124 @@ public abstract class GeoPackageCoreConnection implements Closeable {
 	 * @param args
 	 *            where arguments
 	 * @return max or null
-	 * @since 1.1.1
+	 * @since 4.0.0
 	 */
-	public abstract Integer max(String table, String column, String where,
-			String[] args);
+	public <T> T max(String table, String column, String where, String[] args) {
+		return aggregateFunction("MAX", table, column, where, args);
+	}
+
+	/**
+	 * Execute an aggregate function
+	 * 
+	 * @param <T>
+	 *            return type
+	 * @param function
+	 *            aggregate function
+	 * @param table
+	 *            table name
+	 * @param column
+	 *            column name
+	 * @return value or null
+	 * @since 4.0.0
+	 */
+	public <T> T aggregateFunction(String function, String table,
+			String column) {
+		return aggregateFunction(function, table, false, column);
+	}
+
+	/**
+	 * Execute an aggregate function
+	 * 
+	 * @param <T>
+	 *            return type
+	 * @param function
+	 *            aggregate function
+	 * @param table
+	 *            table name
+	 * @param distinct
+	 *            distinct column flag
+	 * @param column
+	 *            column name
+	 * @return value or null
+	 * @since 4.0.0
+	 */
+	public <T> T aggregateFunction(String function, String table,
+			boolean distinct, String column) {
+		return aggregateFunction(function, table, distinct, column, null, null);
+	}
+
+	/**
+	 * Execute an aggregate function
+	 * 
+	 * @param <T>
+	 *            return type
+	 * @param function
+	 *            aggregate function
+	 * @param table
+	 *            table name
+	 * @param column
+	 *            column name
+	 * @param where
+	 *            where clause
+	 * @param args
+	 *            arguments
+	 * @return value or null
+	 * @since 4.0.0
+	 */
+	public <T> T aggregateFunction(String function, String table, String column,
+			String where, String[] args) {
+		return aggregateFunction(function, table, false, column, where, args);
+	}
+
+	/**
+	 * Execute an aggregate function
+	 * 
+	 * @param <T>
+	 *            return type
+	 * @param function
+	 *            aggregate function
+	 * @param table
+	 *            table name
+	 * @param distinct
+	 *            distinct column flag
+	 * @param column
+	 *            column name
+	 * @param where
+	 *            where clause
+	 * @param args
+	 *            arguments
+	 * @return value or null
+	 * @since 4.0.0
+	 */
+	public <T> T aggregateFunction(String function, String table,
+			boolean distinct, String column, String where, String[] args) {
+
+		StringBuilder query = new StringBuilder();
+		query.append("SELECT ");
+		query.append(function);
+		query.append("(");
+		if (column != null) {
+			if (distinct) {
+				query.append("DISTINCT ");
+			}
+			query.append(CoreSQLUtils.quoteWrap(column));
+		} else {
+			query.append("*");
+		}
+		query.append(") FROM ");
+		query.append(CoreSQLUtils.quoteWrap(table));
+		if (where != null) {
+			query.append(" WHERE ").append(where);
+		}
+		String sql = query.toString();
+
+		Object value = querySingleResult(sql, args);
+
+		@SuppressWarnings("unchecked")
+		T typedValue = (T) value;
+
+		return typedValue;
+	}
 
 	/**
 	 * {@inheritDoc}
@@ -128,8 +527,32 @@ public abstract class GeoPackageCoreConnection implements Closeable {
 	 * @return true if exists
 	 */
 	public boolean tableExists(String tableName) {
-		return count("sqlite_master", "tbl_name = ?",
-				new String[] { tableName }) > 0;
+		return SQLiteMaster.count(this, SQLiteMasterType.TABLE, tableName) > 0;
+	}
+
+	/**
+	 * Check if the view exists
+	 * 
+	 * @param viewName
+	 *            view name
+	 * @return true if exists
+	 * @since 4.0.0
+	 */
+	public boolean viewExists(String viewName) {
+		return SQLiteMaster.count(this, SQLiteMasterType.VIEW, viewName) > 0;
+	}
+
+	/**
+	 * Check if a table or view exists with the name
+	 * 
+	 * @param name
+	 *            table or view name
+	 * @return true if exists
+	 * @since 4.0.0
+	 */
+	public boolean tableOrViewExists(String name) {
+		return SQLiteMaster.count(this, new SQLiteMasterType[] {
+				SQLiteMasterType.TABLE, SQLiteMasterType.VIEW }, name) > 0;
 	}
 
 	/**
@@ -142,7 +565,17 @@ public abstract class GeoPackageCoreConnection implements Closeable {
 	 * @return true if column exists
 	 * @since 1.1.8
 	 */
-	public abstract boolean columnExists(String tableName, String columnName);
+	public boolean columnExists(String tableName, String columnName) {
+
+		boolean exists = false;
+
+		TableInfo tableInfo = TableInfo.info(this, tableName);
+		if (tableInfo != null) {
+			exists = tableInfo.hasColumn(columnName);
+		}
+
+		return exists;
+	}
 
 	/**
 	 * Add a new column to the table
@@ -155,10 +588,9 @@ public abstract class GeoPackageCoreConnection implements Closeable {
 	 *            column definition
 	 * @since 1.1.8
 	 */
-	public void addColumn(String tableName, String columnName, String columnDef) {
-		execSQL("ALTER TABLE " + CoreSQLUtils.quoteWrap(tableName)
-				+ " ADD COLUMN " + CoreSQLUtils.quoteWrap(columnName) + " "
-				+ columnDef + ";");
+	public void addColumn(String tableName, String columnName,
+			String columnDef) {
+		AlterTable.addColumn(this, tableName, columnName, columnDef);
 	}
 
 	/**
@@ -336,7 +768,8 @@ public abstract class GeoPackageCoreConnection implements Closeable {
 	 * @return single column values
 	 * @since 3.1.0
 	 */
-	public <T> List<T> querySingleColumnTypedResults(String sql, String[] args) {
+	public <T> List<T> querySingleColumnTypedResults(String sql,
+			String[] args) {
 		@SuppressWarnings("unchecked")
 		List<T> result = (List<T>) querySingleColumnResults(sql, args);
 		return result;
@@ -376,7 +809,8 @@ public abstract class GeoPackageCoreConnection implements Closeable {
 	public <T> List<T> querySingleColumnTypedResults(String sql, String[] args,
 			GeoPackageDataType dataType) {
 		@SuppressWarnings("unchecked")
-		List<T> result = (List<T>) querySingleColumnResults(sql, args, dataType);
+		List<T> result = (List<T>) querySingleColumnResults(sql, args,
+				dataType);
 		return result;
 	}
 
@@ -804,19 +1238,61 @@ public abstract class GeoPackageCoreConnection implements Closeable {
 	 * @since 1.2.1
 	 */
 	public String getApplicationId() {
-		String applicationId = null;
-		Integer applicationIdObject = querySingleTypedResult(
-				"PRAGMA application_id", null, GeoPackageDataType.MEDIUMINT);
-		if (applicationIdObject != null) {
-			try {
-				applicationId = new String(ByteBuffer.allocate(4)
-						.putInt(applicationIdObject).array(), "UTF-8");
-			} catch (UnsupportedEncodingException e) {
-				throw new GeoPackageException(
-						"Unexpected application id character encoding", e);
+		return getApplicationId(getApplicationIdInteger());
+	}
+
+	/**
+	 * Get the application id integer
+	 * 
+	 * @return application id integer
+	 * @since 4.0.0
+	 */
+	public Integer getApplicationIdInteger() {
+		return querySingleTypedResult("PRAGMA application_id", null,
+				GeoPackageDataType.MEDIUMINT);
+	}
+
+	/**
+	 * Get the application id as a hex string prefixed with 0x
+	 * 
+	 * @return application id hex string
+	 * @since 4.0.0
+	 */
+	public String getApplicationIdHex() {
+		String hex = null;
+		Integer applicationId = getApplicationIdInteger();
+		if (applicationId != null) {
+			hex = "0x" + Integer.toHexString(applicationId);
+		}
+		return hex;
+	}
+
+	/**
+	 * Get the application id string value for the application id integer
+	 * 
+	 * @param applicationId
+	 *            application id integer
+	 * @return application id
+	 * @since 4.0.0
+	 */
+	public static String getApplicationId(Integer applicationId) {
+		String id = null;
+		if (applicationId != null) {
+			if (applicationId == 0) {
+				id = GeoPackageConstants.SQLITE_APPLICATION_ID;
+			} else {
+				try {
+					id = new String(ByteBuffer.allocate(4).putInt(applicationId)
+							.array(), "UTF-8");
+				} catch (UnsupportedEncodingException e) {
+					throw new GeoPackageException(
+							"Unexpected application id character encoding: "
+									+ applicationId,
+							e);
+				}
 			}
 		}
-		return applicationId;
+		return id;
 	}
 
 	/**
@@ -845,14 +1321,54 @@ public abstract class GeoPackageCoreConnection implements Closeable {
 	 * @return user version
 	 * @since 1.2.1
 	 */
-	public int getUserVersion() {
-		int userVersion = -1;
-		Integer userVersionObject = querySingleTypedResult(
-				"PRAGMA user_version", null, GeoPackageDataType.MEDIUMINT);
-		if (userVersionObject != null) {
-			userVersion = userVersionObject;
+	public Integer getUserVersion() {
+		return querySingleTypedResult("PRAGMA user_version", null,
+				GeoPackageDataType.MEDIUMINT);
+	}
+
+	/**
+	 * Get the user version major
+	 *
+	 * @return user version major
+	 * @since 4.0.0
+	 */
+	public Integer getUserVersionMajor() {
+		Integer major = null;
+		Integer userVersion = getUserVersion();
+		if (userVersion != null) {
+			major = userVersion / 10000;
 		}
-		return userVersion;
+		return major;
+	}
+
+	/**
+	 * Get the user version minor
+	 *
+	 * @return user version minor
+	 * @since 4.0.0
+	 */
+	public Integer getUserVersionMinor() {
+		Integer minor = null;
+		Integer userVersion = getUserVersion();
+		if (userVersion != null) {
+			minor = (userVersion % 10000) / 100;
+		}
+		return minor;
+	}
+
+	/**
+	 * Get the user version patch
+	 *
+	 * @return user version patch
+	 * @since 4.0.0
+	 */
+	public Integer getUserVersionPatch() {
+		Integer patch = null;
+		Integer userVersion = getUserVersion();
+		if (userVersion != null) {
+			patch = userVersion % 100;
+		}
+		return patch;
 	}
 
 }

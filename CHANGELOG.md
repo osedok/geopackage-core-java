@@ -4,9 +4,94 @@ Adheres to [Semantic Versioning](http://semver.org/).
 
 ---
 
-## 3.1.1 (TBD)
+## 4.0.1 (TBD)
 
 * TBD
+
+## [4.0.0](https://github.com/ngageoint/geopackage-core-java/releases/tag/4.0.0) (07-14-2020)
+
+* GeoPackage spec version 1.3.0
+* sf-wkb version 2.0.3
+* sf-wkt version 1.0.0
+* sf-proj version 3.0.3
+* oapi-features-json version 1.0.2
+* Community extensions decoupling and management, including class repackaging
+* Contents Data Type refactor, core data types and expanded custom data type support
+* Wider support for views in place of tables, including a new GeoPackageDao
+* User table creation refactor with metadata objects
+* GeoPackage application id, user version, contents type, and bounding box enhancements
+* DAO options to enable modifying row ids or disable column value type validation
+* DAO creation methods
+* Distinct select statement queries and counts
+* Aggregate functions (count, max, min) refactor
+* Optional autoincrement support
+* Columns constraints copy fix, resolving alter table schema information losses
+* More lenient checks, logging errors in place of throwing exceptions and continuing
+* Geometry Data build envelope, creation, byte, Well-Known Text, and transform methods
+* Image Matters Portrayal and Vector Tiles extensions
+* Ecere Tile Matrix Set extension
+
+## [3.5.0](https://github.com/ngageoint/geopackage-core-java/releases/tag/3.5.0) (03-10-2020)
+
+* Separation of columns from user tables to support custom column queries
+* User DAO methods: query for specified columns, additional counts
+* Bounding box utility methods
+
+## [3.4.0](https://github.com/ngageoint/geopackage-core-java/releases/tag/3.4.0) (11-14-2019)
+
+* sf-proj version 3.0.2
+* oapi-features-json version 1.0.1
+* Database Result utility updates
+* Additional connection and DAO query and count methods
+* Additional user result get value and id methods
+* Removed default values on user tile table columns
+* Add Contents Id Extension table to Contents table for use in related tables
+* SQLite Query Builder, moved from GeoPackage Java
+
+## [3.3.0](https://github.com/ngageoint/geopackage-core-java/releases/tag/3.3.0) (07-09-2019)
+
+* sf-wkb version 2.0.2
+* sf-proj version 3.0.1
+* oapi-features-json version 1.0.0
+* Alter table support: rename table, rename column, add column, drop column, alter column, copy table
+* User DAO and table alter support: add, rename, drop, alter
+* GeoPackage rename table, copy table, foreign keys, and vacuum support
+* Automatic user column index assignments
+* Transaction shortcut methods for the GeoPackages, connections, and User DAOs
+* User column shortcut creation methods
+* User table and user column copy methods and constructors
+* SQL utilities for tables, columns, foreign keys, views, data transfers, checks, and vacuum
+* SQLite Master table (sqlite_master) support
+* Table Info (PRAGMA table_info) support
+* Table and column mapping for table alterations
+* Table and column constraints, including manual creation and automatic table parsing
+* Core table readers
+* Date Converter check for date functions
+* GeoPackage Data Type find by name method
+* Extensions table copy support
+* Missing extension table rows for Metadata Extension and Schema Extension
+* Missing comma in gpkg_2d_gridded_coverage_ancillary table schema
+* gpkg_data_columns table: removed foreign key requirement, unique constraint update
+* Missing comma in nga_tile_scaling table schema
+* OGC API Features download to GeoPackage support
+* Modifiable GeoPackageIOUtils copy buffer, defaulted at 8k byte chunks
+
+## [3.2.0](https://github.com/ngageoint/geopackage-core-java/releases/tag/3.2.0) (04-02-2019)
+
+* sf-wkb version 2.0.1
+* sf-proj version 3.0.0
+* NGA [Contents Id](http://ngageoint.github.io/GeoPackage/docs/extensions/contents-id.html) Extension
+* NGA [Feature Style](http://ngageoint.github.io/GeoPackage/docs/extensions/feature-style.html) Extension
+* OGC [Related Tables](http://www.geopackage.org/18-000.html) Extension improvements
+* GeoPackage user version saved as 1.2.1
+* Improved GeoPackage extension cleanup
+* Color support and utilities for hex, RBG, arithmetic RBG, HSL, and integer colors
+* Common data type and contents methods for all User Table types
+* GeoPackage contents check for table names
+* Build an envelope from a Bounding Box
+* WKT for Coordinate Reference Systems extension default value of 'undefined' removed
+* Tile Bounding Box Utils latitude and longitude position from pixel with tile bounds
+* Eclipse project cleanup
 
 ## [3.1.0](https://github.com/ngageoint/geopackage-core-java/releases/tag/3.1.0) (10-04-2018)
 

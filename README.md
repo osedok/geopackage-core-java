@@ -27,7 +27,7 @@ The [GeoPackage Android](https://github.com/ngageoint/geopackage-android) SDK is
 
 The [GeoPackage Android Map](https://github.com/ngageoint/geopackage-android-map) SDK adds Android Map implementations to [GeoPackage Android](https://github.com/ngageoint/geopackage-android).
 
-#### GeoPackage SDK Sample ####
+#### GeoPackage MapCache ####
 
 The [GeoPackage MapCache](https://github.com/ngageoint/geopackage-mapcache-android) app provides an Android example of using the [GeoPackage Android Map](https://github.com/ngageoint/geopackage-android-map) SDK.
 
@@ -37,15 +37,17 @@ The [GeoPackage Java](https://github.com/ngageoint/geopackage-java) library is a
 
 ### Installation ###
 
-Pull from the [Maven Central Repository](http://search.maven.org/#artifactdetails|mil.nga.geopackage|geopackage-core|3.1.0|jar) (JAR, POM, Source, Javadoc)
+Pull from the [Maven Central Repository](http://search.maven.org/#artifactdetails|mil.nga.geopackage|geopackage-core|4.0.0|jar) (JAR, POM, Source, Javadoc)
 
     <dependency>
         <groupId>mil.nga.geopackage</groupId>
         <artifactId>geopackage-core</artifactId>
-        <version>3.1.0</version>
+        <version>4.0.0</version>
     </dependency>
 
 ### Build ###
+
+[![Build & Test](https://github.com/ngageoint/geopackage-core-java/workflows/Build%20&%20Test/badge.svg)](https://github.com/ngageoint/geopackage-core-java/actions?query=workflow%3A%22Build+%26+Test%22)
 
 Build this repository using Eclipse and/or Maven:
 
@@ -54,5 +56,7 @@ Build this repository using Eclipse and/or Maven:
 ### Remote Dependencies ###
 
 * [Simple Features WKB](https://github.com/ngageoint/simple-features-wkb-java) (The MIT License (MIT)) - Simple Features Well Known Binary Lib
+* [Simple Features WKT](https://github.com/ngageoint/simple-features-wkt-java) (The MIT License (MIT)) - Simple Features Well Known Text Lib
 * [Simple Features Projection](https://github.com/ngageoint/simple-features-proj-java) (The MIT License (MIT)) - Simple Features Projection Lib
+* [OGC API Features JSON](https://github.com/ngageoint/ogc-api-features-json-java) (The MIT License (MIT)) - OGC API Features JSON Lib
 * [OrmLite](http://ormlite.com/) (Open Source License) - Object Relational Mapping (ORM) Library

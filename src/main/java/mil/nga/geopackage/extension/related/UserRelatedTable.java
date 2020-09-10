@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.List;
 
 import mil.nga.geopackage.GeoPackageException;
-import mil.nga.geopackage.core.contents.Contents;
+import mil.nga.geopackage.contents.Contents;
 import mil.nga.geopackage.user.custom.UserCustomColumn;
 import mil.nga.geopackage.user.custom.UserCustomTable;
 
@@ -25,11 +25,6 @@ public class UserRelatedTable extends UserCustomTable {
 	 * Contents data type
 	 */
 	private final String dataType;
-
-	/**
-	 * Foreign key to Contents
-	 */
-	private Contents contents;
 
 	/**
 	 * Constructor
@@ -100,41 +95,25 @@ public class UserRelatedTable extends UserCustomTable {
 	}
 
 	/**
-	 * Get the contents data type
-	 * 
-	 * @return data type
-	 * @since 3.1.0
+	 * {@inheritDoc}
 	 */
+	@Override
 	public String getDataType() {
 		return dataType;
 	}
 
 	/**
-	 * Get the contents
-	 * 
-	 * @return contents
+	 * {@inheritDoc}
 	 */
-	public Contents getContents() {
-		return contents;
-	}
-
-	/**
-	 * Set the contents
-	 * 
-	 * @param contents
-	 *            contents
-	 */
-	public void setContents(Contents contents) {
-		this.contents = contents;
-		if (contents != null) {
-			// Verify the Contents have a relation name data type
-			String contentsDataType = contents.getDataTypeString();
-			if (contentsDataType == null || !contentsDataType.equals(dataType)) {
-				throw new GeoPackageException("The "
-						+ Contents.class.getSimpleName() + " of a "
-						+ getClass().getSimpleName()
-						+ " must have a data type of " + dataType);
-			}
+	@Override
+	protected void validateContents(Contents contents) {
+		// Verify the Contents have a relation name data type
+		String contentsDataType = contents.getDataTypeName();
+		if (contentsDataType == null || !contentsDataType.equals(dataType)) {
+			throw new GeoPackageException("The "
+					+ Contents.class.getSimpleName() + " of a "
+					+ getClass().getSimpleName() + " must have a data type of "
+					+ dataType);
 		}
 	}
 

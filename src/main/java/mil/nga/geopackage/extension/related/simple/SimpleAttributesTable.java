@@ -1,7 +1,6 @@
 package mil.nga.geopackage.extension.related.simple;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 import mil.nga.geopackage.GeoPackageException;
@@ -9,6 +8,7 @@ import mil.nga.geopackage.db.GeoPackageDataType;
 import mil.nga.geopackage.extension.related.RelationType;
 import mil.nga.geopackage.extension.related.UserRelatedTable;
 import mil.nga.geopackage.user.UserColumn;
+import mil.nga.geopackage.user.UserTable;
 import mil.nga.geopackage.user.custom.UserCustomColumn;
 import mil.nga.geopackage.user.custom.UserCustomTable;
 
@@ -31,56 +31,44 @@ public class SimpleAttributesTable extends UserRelatedTable {
 	public static final String COLUMN_ID = "id";
 
 	/**
-	 * Create a simple attributes table with the columns
+	 * Create a simple attributes table with the metadata
 	 * 
-	 * @param tableName
-	 *            table name
-	 * @param columns
-	 *            columns
+	 * @param metadata
+	 *            simple attributes table metadata
 	 * @return simple attributes table
+	 * @since 4.0.0
 	 */
-	public static SimpleAttributesTable create(String tableName,
-			List<UserCustomColumn> columns) {
-		return create(tableName, null, columns);
+	public static SimpleAttributesTable create(
+			SimpleAttributesTableMetadata metadata) {
+		List<UserCustomColumn> columns = metadata.buildColumns();
+		return new SimpleAttributesTable(metadata.getTableName(), columns,
+				metadata.getIdColumnName());
 	}
 
 	/**
-	 * Create a simple attributes table with the id column and columns
-	 * 
-	 * @param tableName
-	 *            table name
-	 * @param idColumnName
-	 *            id column name
-	 * @param columns
-	 *            columns
-	 * @return simple attributes table
-	 */
-	public static SimpleAttributesTable create(String tableName,
-			String idColumnName, List<UserCustomColumn> columns) {
-
-		List<UserCustomColumn> tableColumns = new ArrayList<>();
-		tableColumns.addAll(createRequiredColumns(idColumnName));
-
-		if (columns != null) {
-			tableColumns.addAll(columns);
-		}
-
-		return new SimpleAttributesTable(tableName, tableColumns,
-				requiredColumns(idColumnName));
-	}
-
-	/**
-	 * Create the required table columns, starting at index 0
+	 * Create the required table columns
 	 * 
 	 * @return user custom columns
 	 */
 	public static List<UserCustomColumn> createRequiredColumns() {
-		return createRequiredColumns(0);
+		return createRequiredColumns(UserTable.DEFAULT_AUTOINCREMENT);
 	}
 
 	/**
-	 * Create the required table columns with the id column name, starting at
-	 * index 0
+	 * Create the required table columns
+	 * 
+	 * @param autoincrement
+	 *            autoincrement id values
+	 * @return user custom columns
+	 * @since 4.0.0
+	 */
+	public static List<UserCustomColumn> createRequiredColumns(
+			boolean autoincrement) {
+		return createRequiredColumns(null, autoincrement);
+	}
+
+	/**
+	 * Create the required table columns with the id column name
 	 * 
 	 * @param idColumnName
 	 *            id column name
@@ -88,7 +76,31 @@ public class SimpleAttributesTable extends UserRelatedTable {
 	 */
 	public static List<UserCustomColumn> createRequiredColumns(
 			String idColumnName) {
-		return createRequiredColumns(0, idColumnName);
+		return createRequiredColumns(idColumnName,
+				UserTable.DEFAULT_AUTOINCREMENT);
+	}
+
+	/**
+	 * Create the required table columns with the id column name
+	 * 
+	 * @param idColumnName
+	 *            id column name
+	 * @param autoincrement
+	 *            autoincrement id values
+	 * @return user custom columns
+	 * @since 4.0.0
+	 */
+	public static List<UserCustomColumn> createRequiredColumns(
+			String idColumnName, boolean autoincrement) {
+
+		if (idColumnName == null) {
+			idColumnName = COLUMN_ID;
+		}
+
+		List<UserCustomColumn> columns = new ArrayList<>();
+		columns.add(createIdColumn(idColumnName, autoincrement));
+
+		return columns;
 	}
 
 	/**
@@ -98,8 +110,25 @@ public class SimpleAttributesTable extends UserRelatedTable {
 	 *            starting index
 	 * @return user custom columns
 	 */
-	public static List<UserCustomColumn> createRequiredColumns(int startingIndex) {
-		return createRequiredColumns(startingIndex, null);
+	public static List<UserCustomColumn> createRequiredColumns(
+			int startingIndex) {
+		return createRequiredColumns(startingIndex,
+				UserTable.DEFAULT_AUTOINCREMENT);
+	}
+
+	/**
+	 * Create the required table columns, starting at the provided index
+	 * 
+	 * @param startingIndex
+	 *            starting index
+	 * @param autoincrement
+	 *            autoincrement id values
+	 * @return user custom columns
+	 * @since 4.0.0
+	 */
+	public static List<UserCustomColumn> createRequiredColumns(
+			int startingIndex, boolean autoincrement) {
+		return createRequiredColumns(startingIndex, null, autoincrement);
 	}
 
 	/**
@@ -114,15 +143,63 @@ public class SimpleAttributesTable extends UserRelatedTable {
 	 */
 	public static List<UserCustomColumn> createRequiredColumns(
 			int startingIndex, String idColumnName) {
+		return createRequiredColumns(startingIndex, idColumnName,
+				UserTable.DEFAULT_AUTOINCREMENT);
+	}
+
+	/**
+	 * Create the required table columns with id column name, starting at the
+	 * provided index
+	 * 
+	 * @param startingIndex
+	 *            starting index
+	 * @param idColumnName
+	 *            id column name
+	 * @param autoincrement
+	 *            autoincrement id values
+	 * @return user custom columns
+	 * @since 4.0.0
+	 */
+	public static List<UserCustomColumn> createRequiredColumns(
+			int startingIndex, String idColumnName, boolean autoincrement) {
 
 		if (idColumnName == null) {
 			idColumnName = COLUMN_ID;
 		}
 
 		List<UserCustomColumn> columns = new ArrayList<>();
-		columns.add(createIdColumn(startingIndex++, idColumnName));
+		columns.add(
+				createIdColumn(startingIndex++, idColumnName, autoincrement));
 
 		return columns;
+	}
+
+	/**
+	 * Create the primary key id column
+	 * 
+	 * @param idColumnName
+	 *            id column name
+	 * @return id column
+	 * @since 3.3.0
+	 */
+	public static UserCustomColumn createIdColumn(String idColumnName) {
+		return UserCustomColumn.createPrimaryKeyColumn(idColumnName);
+	}
+
+	/**
+	 * Create the primary key id column
+	 * 
+	 * @param idColumnName
+	 *            id column name
+	 * @param autoincrement
+	 *            autoincrement id values
+	 * @return id column
+	 * @since 4.0.0
+	 */
+	public static UserCustomColumn createIdColumn(String idColumnName,
+			boolean autoincrement) {
+		return UserCustomColumn.createPrimaryKeyColumn(idColumnName,
+				autoincrement);
 	}
 
 	/**
@@ -134,8 +211,27 @@ public class SimpleAttributesTable extends UserRelatedTable {
 	 *            id column name
 	 * @return id column
 	 */
-	public static UserCustomColumn createIdColumn(int index, String idColumnName) {
+	public static UserCustomColumn createIdColumn(int index,
+			String idColumnName) {
 		return UserCustomColumn.createPrimaryKeyColumn(index, idColumnName);
+	}
+
+	/**
+	 * Create the primary key id column
+	 * 
+	 * @param index
+	 *            column index
+	 * @param idColumnName
+	 *            id column name
+	 * @param autoincrement
+	 *            autoincrement id values
+	 * @return id column
+	 * @since 4.0.0
+	 */
+	public static UserCustomColumn createIdColumn(int index,
+			String idColumnName, boolean autoincrement) {
+		return UserCustomColumn.createPrimaryKeyColumn(index, idColumnName,
+				autoincrement);
 	}
 
 	/**
@@ -182,13 +278,26 @@ public class SimpleAttributesTable extends UserRelatedTable {
 	 *            table name
 	 * @param columns
 	 *            list of columns
-	 * @param requiredColumns
-	 *            list of required columns
 	 */
-	private SimpleAttributesTable(String tableName,
-			List<UserCustomColumn> columns, Collection<String> requiredColumns) {
+	public SimpleAttributesTable(String tableName,
+			List<UserCustomColumn> columns) {
+		this(tableName, columns, null);
+	}
+
+	/**
+	 * Constructor
+	 * 
+	 * @param tableName
+	 *            table name
+	 * @param columns
+	 *            list of columns
+	 * @param idColumnName
+	 *            id column name
+	 */
+	public SimpleAttributesTable(String tableName,
+			List<UserCustomColumn> columns, String idColumnName) {
 		super(tableName, RELATION_TYPE.getName(), RELATION_TYPE.getDataType(),
-				columns, requiredColumns);
+				columns, requiredColumns(idColumnName));
 		validateColumns();
 	}
 
@@ -198,7 +307,7 @@ public class SimpleAttributesTable extends UserRelatedTable {
 	 * @param table
 	 *            user custom table
 	 */
-	SimpleAttributesTable(UserCustomTable table) {
+	public SimpleAttributesTable(UserCustomTable table) {
 		super(RELATION_TYPE.getName(), RELATION_TYPE.getDataType(), table);
 		validateColumns();
 	}
@@ -258,25 +367,14 @@ public class SimpleAttributesTable extends UserRelatedTable {
 
 	/**
 	 * Determine if the data type is a simple type: TEXT, INTEGER, or REAL
+	 * storage classes
 	 * 
 	 * @param dataType
 	 *            data type
 	 * @return true if a simple column
 	 */
 	public static boolean isSimple(GeoPackageDataType dataType) {
-
-		boolean simple = false;
-
-		switch (dataType) {
-		case TEXT:
-		case INTEGER:
-		case REAL:
-			simple = true;
-			break;
-		default:
-		}
-
-		return simple;
+		return dataType != GeoPackageDataType.BLOB;
 	}
 
 }

@@ -26,6 +26,13 @@ public class GeoPackageIOUtils {
 			.getLogger(GeoPackageIOUtils.class.getName());
 
 	/**
+	 * Copy stream buffer chunk size in bytes
+	 * 
+	 * @since 3.3.0
+	 */
+	public static int COPY_BUFFER_SIZE = 8192;
+
+	/**
 	 * Get the file extension
 	 * 
 	 * @param file
@@ -33,13 +40,24 @@ public class GeoPackageIOUtils {
 	 * @return extension
 	 */
 	public static String getFileExtension(File file) {
+		return getFileExtension(file.getName());
+	}
 
-		String fileName = file.getName();
+	/**
+	 * Get the file extension
+	 * 
+	 * @param name
+	 *            name
+	 * @return extension
+	 * @since 3.5.0
+	 */
+	public static String getFileExtension(String name) {
+
 		String extension = null;
 
-		int extensionIndex = fileName.lastIndexOf(".");
+		int extensionIndex = name.lastIndexOf(".");
 		if (extensionIndex > -1) {
-			extension = fileName.substring(extensionIndex + 1);
+			extension = name.substring(extensionIndex + 1);
 		}
 
 		return extension;
@@ -58,6 +76,18 @@ public class GeoPackageIOUtils {
 	}
 
 	/**
+	 * Check if the name has an extension
+	 * 
+	 * @param name
+	 *            name
+	 * @return true if has extension
+	 * @since 3.5.0
+	 */
+	public static boolean hasFileExtension(String name) {
+		return getFileExtension(name) != null;
+	}
+
+	/**
 	 * Add a the file extension to the file
 	 * 
 	 * @param file
@@ -68,7 +98,21 @@ public class GeoPackageIOUtils {
 	 * @since 3.0.2
 	 */
 	public static File addFileExtension(File file, String extension) {
-		return new File(file.getAbsolutePath() + "." + extension);
+		return new File(addFileExtension(file.getAbsolutePath(), extension));
+	}
+
+	/**
+	 * Add a the file extension to the name
+	 * 
+	 * @param name
+	 *            name
+	 * @param extension
+	 *            file extension
+	 * @return new name with extension
+	 * @since 3.5.0
+	 */
+	public static String addFileExtension(String name, String extension) {
+		return name + "." + extension;
 	}
 
 	/**
@@ -79,8 +123,18 @@ public class GeoPackageIOUtils {
 	 * @return file name
 	 */
 	public static String getFileNameWithoutExtension(File file) {
+		return getFileNameWithoutExtension(file.getName());
+	}
 
-		String name = file.getName();
+	/**
+	 * Get the file name with the extension removed
+	 * 
+	 * @param name
+	 *            name
+	 * @return file name
+	 * @since 3.5.0
+	 */
+	public static String getFileNameWithoutExtension(String name) {
 
 		int extensionIndex = name.lastIndexOf(".");
 		if (extensionIndex > -1) {
@@ -184,6 +238,42 @@ public class GeoPackageIOUtils {
 	}
 
 	/**
+	 * Get the stream string in UTF-8
+	 * 
+	 * @param stream
+	 *            input stream
+	 * @return stream string
+	 * @throws IOException
+	 *             upon failure
+	 * @since 3.3.0
+	 */
+	public static String streamString(InputStream stream) throws IOException {
+		return streamString(stream, "UTF-8");
+	}
+
+	/**
+	 * Get the stream string
+	 * 
+	 * @param stream
+	 *            input stream
+	 * @param charsetName
+	 *            character set name
+	 * @return stream string
+	 * @throws IOException
+	 *             upon failure
+	 * @since 3.3.0
+	 */
+	public static String streamString(InputStream stream, String charsetName)
+			throws IOException {
+
+		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+
+		copyStream(stream, bytes);
+
+		return bytes.toString(charsetName);
+	}
+
+	/**
 	 * Copy an input stream to an output stream
 	 * 
 	 * @param copyFrom
@@ -214,7 +304,7 @@ public class GeoPackageIOUtils {
 			GeoPackageProgress progress) throws IOException {
 
 		try {
-			byte[] buffer = new byte[1024];
+			byte[] buffer = new byte[COPY_BUFFER_SIZE];
 			int length;
 			while ((progress == null || progress.isActive())
 					&& (length = copyFrom.read(buffer)) > 0) {

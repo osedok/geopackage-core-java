@@ -44,7 +44,8 @@ public class GeoPackageProperties {
 	 *            true if required
 	 * @return value
 	 */
-	public static synchronized String getProperty(String key, boolean required) {
+	public static synchronized String getProperty(String key,
+			boolean required) {
 		if (mProperties == null) {
 			mProperties = initializeConfigurationProperties();
 		}
@@ -56,33 +57,29 @@ public class GeoPackageProperties {
 	}
 
 	/**
-	 * Get a required property by base property and property name
+	 * Get a required property by property parts
 	 * 
-	 * @param base
-	 *            base property
-	 * @param property
-	 *            property
+	 * @param properties
+	 *            property parts
 	 * @return value
+	 * @since 4.0.0
 	 */
-	public static String getProperty(String base, String property) {
-		return getProperty(base, property, true);
+	public static String getProperty(String... properties) {
+		return getProperty(true, properties);
 	}
 
 	/**
-	 * Get a property by base property and property name
+	 * Get a property by property parts
 	 * 
-	 * @param base
-	 *            base property
-	 * @param property
-	 *            property
 	 * @param required
 	 *            true if required
+	 * @param properties
+	 *            property parts
 	 * @return value
+	 * @since 4.0.0
 	 */
-	public static synchronized String getProperty(String base, String property,
-			boolean required) {
-		return getProperty(
-				base + PropertyConstants.PROPERTY_DIVIDER + property, required);
+	public static String getProperty(boolean required, String... properties) {
+		return getProperty(buildProperty(properties), required);
 	}
 
 	/**
@@ -115,33 +112,30 @@ public class GeoPackageProperties {
 	}
 
 	/**
-	 * Get a required integer property by base property and property name
+	 * Get a required integer property by property parts
 	 * 
-	 * @param base
-	 *            base property
-	 * @param property
-	 *            property
+	 * @param properties
+	 *            property parts
 	 * @return integer value
+	 * @since 4.0.0
 	 */
-	public static int getIntegerProperty(String base, String property) {
-		return getIntegerProperty(base, property, true);
+	public static int getIntegerProperty(String... properties) {
+		return getIntegerProperty(true, properties);
 	}
 
 	/**
-	 * Get an integer property by base property and property name
+	 * Get an integer property by property parts
 	 * 
-	 * @param base
-	 *            base property
-	 * @param property
-	 *            property
 	 * @param required
 	 *            true if required
+	 * @param properties
+	 *            property parts
 	 * @return integer value
+	 * @since 4.0.0
 	 */
-	public static Integer getIntegerProperty(String base, String property,
-			boolean required) {
-		return getIntegerProperty(base + PropertyConstants.PROPERTY_DIVIDER
-				+ property, required);
+	public static Integer getIntegerProperty(boolean required,
+			String... properties) {
+		return getIntegerProperty(buildProperty(properties), required);
 	}
 
 	/**
@@ -174,6 +168,33 @@ public class GeoPackageProperties {
 	}
 
 	/**
+	 * Get a required float property by property parts
+	 * 
+	 * @param properties
+	 *            property parts
+	 * @return float value
+	 * @since 4.0.0
+	 */
+	public static float getFloatProperty(String... properties) {
+		return getFloatProperty(true, properties);
+	}
+
+	/**
+	 * Get a float property by property parts
+	 * 
+	 * @param required
+	 *            true if required
+	 * @param properties
+	 *            property parts
+	 * @return float value
+	 * @since 4.0.0
+	 */
+	public static Float getFloatProperty(boolean required,
+			String... properties) {
+		return getFloatProperty(buildProperty(properties), required);
+	}
+
+	/**
 	 * Get a required boolean by key
 	 * 
 	 * @param key
@@ -203,6 +224,33 @@ public class GeoPackageProperties {
 	}
 
 	/**
+	 * Get a required boolean property by property parts
+	 * 
+	 * @param properties
+	 *            property parts
+	 * @return boolean value
+	 * @since 4.0.0
+	 */
+	public static boolean getBooleanProperty(String... properties) {
+		return getBooleanProperty(true, properties);
+	}
+
+	/**
+	 * Get a boolean property by property parts
+	 * 
+	 * @param required
+	 *            true if required
+	 * @param properties
+	 *            property parts
+	 * @return boolean value
+	 * @since 4.0.0
+	 */
+	public static Boolean getBooleanProperty(boolean required,
+			String... properties) {
+		return getBooleanProperty(buildProperty(properties), required);
+	}
+
+	/**
 	 * Initialize the configuration properties
 	 * 
 	 * @return properties
@@ -210,8 +258,8 @@ public class GeoPackageProperties {
 	private static Properties initializeConfigurationProperties() {
 		Properties properties = new Properties();
 
-		InputStream in = GeoPackageProperties.class.getResourceAsStream("/"
-				+ PropertyConstants.PROPERTIES_FILE);
+		InputStream in = GeoPackageProperties.class
+				.getResourceAsStream("/" + PropertyConstants.PROPERTIES_FILE);
 		if (in != null) {
 			try {
 				properties.load(in);
@@ -233,4 +281,28 @@ public class GeoPackageProperties {
 
 		return properties;
 	}
+
+	/**
+	 * Build a combined property separated by
+	 * {@link PropertyConstants#PROPERTY_DIVIDER}
+	 * 
+	 * @param properties
+	 *            property parts
+	 * 
+	 * @return combined property
+	 * @since 4.0.0
+	 */
+	public static String buildProperty(String... properties) {
+		StringBuilder combined = new StringBuilder();
+		for (String property : properties) {
+			if (property != null) {
+				if (combined.length() > 0) {
+					combined.append(PropertyConstants.PROPERTY_DIVIDER);
+				}
+				combined.append(property);
+			}
+		}
+		return combined.toString();
+	}
+
 }

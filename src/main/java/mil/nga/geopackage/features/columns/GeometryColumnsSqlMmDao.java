@@ -6,22 +6,51 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import mil.nga.geopackage.schema.TableColumnKey;
-
-import com.j256.ormlite.dao.BaseDaoImpl;
 import com.j256.ormlite.stmt.DeleteBuilder;
 import com.j256.ormlite.stmt.PreparedDelete;
 import com.j256.ormlite.stmt.PreparedUpdate;
 import com.j256.ormlite.stmt.UpdateBuilder;
 import com.j256.ormlite.support.ConnectionSource;
 
+import mil.nga.geopackage.GeoPackageCore;
+import mil.nga.geopackage.db.GeoPackageCoreConnection;
+import mil.nga.geopackage.db.GeoPackageDao;
+import mil.nga.geopackage.db.TableColumnKey;
+
 /**
  * SQL/MM Geometry Columns Data Access Object
  * 
  * @author osbornb
  */
-public class GeometryColumnsSqlMmDao extends
-		BaseDaoImpl<GeometryColumnsSqlMm, TableColumnKey> {
+public class GeometryColumnsSqlMmDao
+		extends GeoPackageDao<GeometryColumnsSqlMm, TableColumnKey> {
+
+	/**
+	 * Create the DAO
+	 * 
+	 * @param geoPackage
+	 *            GeoPackage
+	 * @return dao
+	 * @since 4.0.0
+	 */
+	public static GeometryColumnsSqlMmDao create(GeoPackageCore geoPackage) {
+		return create(geoPackage.getDatabase());
+	}
+
+	/**
+	 * Create the DAO
+	 * 
+	 * @param db
+	 *            database connection
+	 * @return dao
+	 * @since 4.0.0
+	 */
+	public static GeometryColumnsSqlMmDao create(GeoPackageCoreConnection db) {
+		GeometryColumnsSqlMmDao dao = GeoPackageDao.createDao(db,
+				GeometryColumnsSqlMm.class);
+		dao.verifyExists();
+		return dao;
+	}
 
 	/**
 	 * Constructor, required by ORMLite
@@ -51,7 +80,8 @@ public class GeometryColumnsSqlMmDao extends
 					key.getTableName());
 			fieldValues.put(GeometryColumnsSqlMm.COLUMN_COLUMN_NAME,
 					key.getColumnName());
-			List<GeometryColumnsSqlMm> results = queryForFieldValues(fieldValues);
+			List<GeometryColumnsSqlMm> results = queryForFieldValues(
+					fieldValues);
 			if (!results.isEmpty()) {
 				if (results.size() > 1) {
 					throw new SQLException("More than one "
@@ -116,8 +146,7 @@ public class GeometryColumnsSqlMmDao extends
 
 		db.where()
 				.eq(GeometryColumnsSqlMm.COLUMN_TABLE_NAME, data.getTableName())
-				.and()
-				.eq(GeometryColumnsSqlMm.COLUMN_COLUMN_NAME,
+				.and().eq(GeometryColumnsSqlMm.COLUMN_COLUMN_NAME,
 						data.getColumnName());
 
 		PreparedDelete<GeometryColumnsSqlMm> deleteQuery = db.prepare();
@@ -161,7 +190,8 @@ public class GeometryColumnsSqlMmDao extends
 	 * Update using the complex key
 	 */
 	@Override
-	public int update(GeometryColumnsSqlMm geometryColumns) throws SQLException {
+	public int update(GeometryColumnsSqlMm geometryColumns)
+			throws SQLException {
 
 		UpdateBuilder<GeometryColumnsSqlMm, TableColumnKey> ub = updateBuilder();
 		ub.updateColumnValue(GeometryColumnsSqlMm.COLUMN_GEOMETRY_TYPE_NAME,
@@ -173,8 +203,7 @@ public class GeometryColumnsSqlMmDao extends
 		ub.where()
 				.eq(GeometryColumnsSqlMm.COLUMN_TABLE_NAME,
 						geometryColumns.getTableName())
-				.and()
-				.eq(GeometryColumnsSqlMm.COLUMN_COLUMN_NAME,
+				.and().eq(GeometryColumnsSqlMm.COLUMN_COLUMN_NAME,
 						geometryColumns.getColumnName());
 
 		PreparedUpdate<GeometryColumnsSqlMm> update = ub.prepare();

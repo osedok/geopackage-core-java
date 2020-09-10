@@ -1,12 +1,13 @@
 package mil.nga.geopackage.extension.related.media;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 import mil.nga.geopackage.db.GeoPackageDataType;
 import mil.nga.geopackage.extension.related.RelationType;
 import mil.nga.geopackage.extension.related.UserRelatedTable;
+import mil.nga.geopackage.user.UserColumn;
+import mil.nga.geopackage.user.UserTable;
 import mil.nga.geopackage.user.custom.UserCustomColumn;
 import mil.nga.geopackage.user.custom.UserCustomTable;
 
@@ -24,11 +25,6 @@ public class MediaTable extends UserRelatedTable {
 	public static final RelationType RELATION_TYPE = RelationType.MEDIA;
 
 	/**
-	 * Autoincrement primary key, optional name
-	 */
-	public static final String COLUMN_ID = "id";
-
-	/**
 	 * Multimedia content column name
 	 */
 	public static final String COLUMN_DATA = "data";
@@ -39,81 +35,43 @@ public class MediaTable extends UserRelatedTable {
 	public static final String COLUMN_CONTENT_TYPE = "content_type";
 
 	/**
-	 * Create a media table with the minimum required columns
+	 * Create a media table with the metadata
 	 * 
-	 * @param tableName
-	 *            table name
+	 * @param metadata
+	 *            media table metadata
 	 * @return media table
+	 * @since 4.0.0
 	 */
-	public static MediaTable create(String tableName) {
-		return create(tableName, null, null);
+	public static MediaTable create(MediaTableMetadata metadata) {
+		List<UserCustomColumn> columns = metadata.buildColumns();
+		return new MediaTable(metadata.getTableName(), columns,
+				metadata.getIdColumnName());
 	}
 
 	/**
-	 * Create a media table with the minimum required columns followed by the
-	 * additional columns
-	 * 
-	 * @param tableName
-	 *            table name
-	 * @param additionalColumns
-	 *            additional columns
-	 * @return media table
-	 */
-	public static MediaTable create(String tableName,
-			List<UserCustomColumn> additionalColumns) {
-		return create(tableName, null, additionalColumns);
-	}
-
-	/**
-	 * Create a media table with the id column and minimum required columns
-	 * 
-	 * @param tableName
-	 *            table name
-	 * @param idColumnName
-	 *            id column name
-	 * @return media table
-	 */
-	public static MediaTable create(String tableName, String idColumnName) {
-		return create(tableName, idColumnName, null);
-	}
-
-	/**
-	 * Create a media table with the id column and minimum required columns
-	 * followed by the additional columns
-	 * 
-	 * @param tableName
-	 *            table name
-	 * @param idColumnName
-	 *            id column name
-	 * @param additionalColumns
-	 *            additional columns
-	 * @return media table
-	 */
-	public static MediaTable create(String tableName, String idColumnName,
-			List<UserCustomColumn> additionalColumns) {
-
-		List<UserCustomColumn> columns = new ArrayList<>();
-		columns.addAll(createRequiredColumns(idColumnName));
-
-		if (additionalColumns != null) {
-			columns.addAll(additionalColumns);
-		}
-
-		return new MediaTable(tableName, columns, requiredColumns(idColumnName));
-	}
-
-	/**
-	 * Create the required table columns, starting at index 0
+	 * Create the required table columns
 	 * 
 	 * @return user custom columns
 	 */
 	public static List<UserCustomColumn> createRequiredColumns() {
-		return createRequiredColumns(0);
+		return createRequiredColumns(UserTable.DEFAULT_AUTOINCREMENT);
 	}
 
 	/**
-	 * Create the required table columns with the id column name, starting at
-	 * index 0
+	 * Create the required table columns
+	 * 
+	 * @param autoincrement
+	 *            autoincrement id values
+	 * @return user custom columns
+	 * @since 4.0.0
+	 */
+	public static List<UserCustomColumn> createRequiredColumns(
+			boolean autoincrement) {
+		return createRequiredColumns(null, autoincrement);
+	}
+
+	/**
+	 * Create the required table columns with the id column name
 	 * 
 	 * @param idColumnName
 	 *            id column name
@@ -121,7 +79,33 @@ public class MediaTable extends UserRelatedTable {
 	 */
 	public static List<UserCustomColumn> createRequiredColumns(
 			String idColumnName) {
-		return createRequiredColumns(0, idColumnName);
+		return createRequiredColumns(idColumnName,
+				UserTable.DEFAULT_AUTOINCREMENT);
+	}
+
+	/**
+	 * Create the required table columns with the id column name
+	 * 
+	 * @param idColumnName
+	 *            id column name
+	 * @param autoincrement
+	 *            autoincrement id values
+	 * @return user custom columns
+	 * @since 4.0.0
+	 */
+	public static List<UserCustomColumn> createRequiredColumns(
+			String idColumnName, boolean autoincrement) {
+
+		if (idColumnName == null) {
+			idColumnName = MediaTableMetadata.DEFAULT_ID_COLUMN_NAME;
+		}
+
+		List<UserCustomColumn> columns = new ArrayList<>();
+		columns.add(createIdColumn(idColumnName, autoincrement));
+		columns.add(createDataColumn());
+		columns.add(createContentTypeColumn());
+
+		return columns;
 	}
 
 	/**
@@ -131,8 +115,25 @@ public class MediaTable extends UserRelatedTable {
 	 *            starting index
 	 * @return user custom columns
 	 */
-	public static List<UserCustomColumn> createRequiredColumns(int startingIndex) {
-		return createRequiredColumns(startingIndex, null);
+	public static List<UserCustomColumn> createRequiredColumns(
+			int startingIndex) {
+		return createRequiredColumns(startingIndex,
+				UserTable.DEFAULT_AUTOINCREMENT);
+	}
+
+	/**
+	 * Create the required table columns, starting at the provided index
+	 * 
+	 * @param startingIndex
+	 *            starting index
+	 * @param autoincrement
+	 *            autoincrement id values
+	 * @return user custom columns
+	 * @since 4.0.0
+	 */
+	public static List<UserCustomColumn> createRequiredColumns(
+			int startingIndex, boolean autoincrement) {
+		return createRequiredColumns(startingIndex, null, autoincrement);
 	}
 
 	/**
@@ -147,17 +148,65 @@ public class MediaTable extends UserRelatedTable {
 	 */
 	public static List<UserCustomColumn> createRequiredColumns(
 			int startingIndex, String idColumnName) {
+		return createRequiredColumns(startingIndex, idColumnName,
+				UserTable.DEFAULT_AUTOINCREMENT);
+	}
+
+	/**
+	 * Create the required table columns with id column name, starting at the
+	 * provided index
+	 * 
+	 * @param startingIndex
+	 *            starting index
+	 * @param idColumnName
+	 *            id column name
+	 * @param autoincrement
+	 *            autoincrement id values
+	 * @return user custom columns
+	 * @since 4.0.0
+	 */
+	public static List<UserCustomColumn> createRequiredColumns(
+			int startingIndex, String idColumnName, boolean autoincrement) {
 
 		if (idColumnName == null) {
-			idColumnName = COLUMN_ID;
+			idColumnName = MediaTableMetadata.DEFAULT_ID_COLUMN_NAME;
 		}
 
 		List<UserCustomColumn> columns = new ArrayList<>();
-		columns.add(createIdColumn(startingIndex++, idColumnName));
+		columns.add(
+				createIdColumn(startingIndex++, idColumnName, autoincrement));
 		columns.add(createDataColumn(startingIndex++));
 		columns.add(createContentTypeColumn(startingIndex++));
 
 		return columns;
+	}
+
+	/**
+	 * Create the primary key id column
+	 * 
+	 * @param idColumnName
+	 *            id column name
+	 * @return id column
+	 * @since 3.3.0
+	 */
+	public static UserCustomColumn createIdColumn(String idColumnName) {
+		return UserCustomColumn.createPrimaryKeyColumn(idColumnName);
+	}
+
+	/**
+	 * Create the primary key id column
+	 * 
+	 * @param idColumnName
+	 *            id column name
+	 * @param autoincrement
+	 *            autoincrement id values
+	 * @return id column
+	 * @since 4.0.0
+	 */
+	public static UserCustomColumn createIdColumn(String idColumnName,
+			boolean autoincrement) {
+		return UserCustomColumn.createPrimaryKeyColumn(idColumnName,
+				autoincrement);
 	}
 
 	/**
@@ -169,8 +218,37 @@ public class MediaTable extends UserRelatedTable {
 	 *            id column name
 	 * @return id column
 	 */
-	public static UserCustomColumn createIdColumn(int index, String idColumnName) {
+	public static UserCustomColumn createIdColumn(int index,
+			String idColumnName) {
 		return UserCustomColumn.createPrimaryKeyColumn(index, idColumnName);
+	}
+
+	/**
+	 * Create the primary key id column
+	 * 
+	 * @param index
+	 *            column index
+	 * @param idColumnName
+	 *            id column name
+	 * @param autoincrement
+	 *            autoincrement id values
+	 * @return id column
+	 * @since 4.0.0
+	 */
+	public static UserCustomColumn createIdColumn(int index,
+			String idColumnName, boolean autoincrement) {
+		return UserCustomColumn.createPrimaryKeyColumn(index, idColumnName,
+				autoincrement);
+	}
+
+	/**
+	 * Create a data column
+	 * 
+	 * @return data column
+	 * @since 3.3.0
+	 */
+	public static UserCustomColumn createDataColumn() {
+		return createDataColumn(UserColumn.NO_INDEX);
 	}
 
 	/**
@@ -182,7 +260,17 @@ public class MediaTable extends UserRelatedTable {
 	 */
 	public static UserCustomColumn createDataColumn(int index) {
 		return UserCustomColumn.createColumn(index, COLUMN_DATA,
-				GeoPackageDataType.BLOB, true, null);
+				GeoPackageDataType.BLOB, true);
+	}
+
+	/**
+	 * Create a content type column
+	 * 
+	 * @return content type column
+	 * @since 3.3.0
+	 */
+	public static UserCustomColumn createContentTypeColumn() {
+		return createContentTypeColumn(UserColumn.NO_INDEX);
 	}
 
 	/**
@@ -194,7 +282,7 @@ public class MediaTable extends UserRelatedTable {
 	 */
 	public static UserCustomColumn createContentTypeColumn(int index) {
 		return UserCustomColumn.createColumn(index, COLUMN_CONTENT_TYPE,
-				GeoPackageDataType.TEXT, true, null);
+				GeoPackageDataType.TEXT, true);
 	}
 
 	/**
@@ -226,7 +314,7 @@ public class MediaTable extends UserRelatedTable {
 	public static List<String> requiredColumns(String idColumnName) {
 
 		if (idColumnName == null) {
-			idColumnName = COLUMN_ID;
+			idColumnName = MediaTableMetadata.DEFAULT_ID_COLUMN_NAME;
 		}
 
 		List<String> requiredColumns = new ArrayList<>();
@@ -243,13 +331,25 @@ public class MediaTable extends UserRelatedTable {
 	 *            table name
 	 * @param columns
 	 *            list of columns
-	 * @param requiredColumns
-	 *            list of required columns
 	 */
-	private MediaTable(String tableName, List<UserCustomColumn> columns,
-			Collection<String> requiredColumns) {
+	public MediaTable(String tableName, List<UserCustomColumn> columns) {
+		this(tableName, columns, null);
+	}
+
+	/**
+	 * Constructor
+	 * 
+	 * @param tableName
+	 *            table name
+	 * @param columns
+	 *            list of columns
+	 * @param idColumnName
+	 *            id column name
+	 */
+	public MediaTable(String tableName, List<UserCustomColumn> columns,
+			String idColumnName) {
 		super(tableName, RELATION_TYPE.getName(), RELATION_TYPE.getDataType(),
-				columns, requiredColumns);
+				columns, requiredColumns(idColumnName));
 	}
 
 	/**
@@ -258,7 +358,7 @@ public class MediaTable extends UserRelatedTable {
 	 * @param table
 	 *            user custom table
 	 */
-	MediaTable(UserCustomTable table) {
+	public MediaTable(UserCustomTable table) {
 		super(RELATION_TYPE.getName(), RELATION_TYPE.getDataType(), table);
 	}
 

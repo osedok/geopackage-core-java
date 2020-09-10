@@ -1,6 +1,8 @@
 package mil.nga.geopackage.db;
 
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * GeoPackage Data Types (non Geometry) for database columns as defined in
@@ -97,6 +99,16 @@ public enum GeoPackageDataType {
 	DATETIME(String.class);
 
 	/**
+	 * Name to type mapping for fast find attempts
+	 */
+	private static final Map<String, GeoPackageDataType> types = new HashMap<>();
+	static {
+		for (GeoPackageDataType type : values()) {
+			types.put(type.name(), type);
+		}
+	}
+
+	/**
 	 * Java class type
 	 */
 	private final Class<?> classType;
@@ -128,6 +140,18 @@ public enum GeoPackageDataType {
 	 */
 	public static GeoPackageDataType fromName(String name) {
 		return valueOf(name.toUpperCase(Locale.US));
+	}
+
+	/**
+	 * Find the Data Type from the name if it exists, ignoring case
+	 * 
+	 * @param name
+	 *            name
+	 * @return data type or null
+	 * @since 3.3.0
+	 */
+	public static GeoPackageDataType findName(String name) {
+		return types.get(name.toUpperCase(Locale.US));
 	}
 
 }

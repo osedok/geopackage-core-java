@@ -7,22 +7,48 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import mil.nga.geopackage.schema.TableColumnKey;
-
-import com.j256.ormlite.dao.BaseDaoImpl;
 import com.j256.ormlite.stmt.DeleteBuilder;
 import com.j256.ormlite.stmt.PreparedDelete;
 import com.j256.ormlite.stmt.PreparedUpdate;
 import com.j256.ormlite.stmt.UpdateBuilder;
 import com.j256.ormlite.support.ConnectionSource;
 
+import mil.nga.geopackage.GeoPackageCore;
+import mil.nga.geopackage.db.GeoPackageCoreConnection;
+import mil.nga.geopackage.db.GeoPackageDao;
+import mil.nga.geopackage.db.TableColumnKey;
+
 /**
  * Geometry Columns Data Access Object
  * 
  * @author osbornb
  */
-public class GeometryColumnsDao extends
-		BaseDaoImpl<GeometryColumns, TableColumnKey> {
+public class GeometryColumnsDao
+		extends GeoPackageDao<GeometryColumns, TableColumnKey> {
+
+	/**
+	 * Create the DAO
+	 * 
+	 * @param geoPackage
+	 *            GeoPackage
+	 * @return dao
+	 * @since 4.0.0
+	 */
+	public static GeometryColumnsDao create(GeoPackageCore geoPackage) {
+		return create(geoPackage.getDatabase());
+	}
+
+	/**
+	 * Create the DAO
+	 * 
+	 * @param db
+	 *            database connection
+	 * @return dao
+	 * @since 4.0.0
+	 */
+	public static GeometryColumnsDao create(GeoPackageCoreConnection db) {
+		return GeoPackageDao.createDao(db, GeometryColumns.class);
+	}
 
 	/**
 	 * Constructor, required by ORMLite
@@ -190,8 +216,7 @@ public class GeometryColumnsDao extends
 		ub.where()
 				.eq(GeometryColumns.COLUMN_TABLE_NAME,
 						geometryColumns.getTableName())
-				.and()
-				.eq(GeometryColumns.COLUMN_COLUMN_NAME,
+				.and().eq(GeometryColumns.COLUMN_COLUMN_NAME,
 						geometryColumns.getColumnName());
 
 		PreparedUpdate<GeometryColumns> update = ub.prepare();

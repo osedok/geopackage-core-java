@@ -11,6 +11,8 @@ import mil.nga.sf.wkb.GeometryCodes;
 /**
  * Geometry Extensions utility methods and constants
  * 
+ * https://www.geopackage.org/spec/#extension_geometry_types
+ * 
  * @author osbornb
  */
 public class GeometryExtensions extends BaseExtension {
@@ -149,7 +151,7 @@ public class GeometryExtensions extends BaseExtension {
 							+ geometryType.getName());
 		}
 
-		String extensionName = GeoPackageConstants.GEO_PACKAGE_EXTENSION_AUTHOR
+		String extensionName = GeoPackageConstants.EXTENSION_AUTHOR
 				+ Extensions.EXTENSION_NAME_DIVIDER
 				+ GeoPackageConstants.GEOMETRY_EXTENSION_PREFIX
 				+ Extensions.EXTENSION_NAME_DIVIDER + geometryType.getName();
@@ -233,7 +235,7 @@ public class GeometryExtensions extends BaseExtension {
 					+ " is not an extension: " + geometryType.getName());
 		}
 
-		String extensionName = (isGeoPackageExtension(geometryType) ? GeoPackageConstants.GEO_PACKAGE_EXTENSION_AUTHOR
+		String extensionName = (isGeoPackageExtension(geometryType) ? GeoPackageConstants.EXTENSION_AUTHOR
 				: author)
 				+ Extensions.EXTENSION_NAME_DIVIDER
 				+ GeoPackageConstants.GEOMETRY_EXTENSION_PREFIX

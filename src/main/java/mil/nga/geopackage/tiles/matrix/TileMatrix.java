@@ -1,11 +1,11 @@
 package mil.nga.geopackage.tiles.matrix;
 
-import mil.nga.geopackage.GeoPackageException;
-import mil.nga.geopackage.core.contents.Contents;
-import mil.nga.geopackage.core.contents.ContentsDataType;
-
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
+
+import mil.nga.geopackage.GeoPackageException;
+import mil.nga.geopackage.contents.Contents;
+import mil.nga.geopackage.contents.ContentsDataType;
 
 /**
  * Tile Matrix object. Documents the structure of the tile matrix at each zoom
@@ -82,7 +82,7 @@ public class TileMatrix {
 	/**
 	 * Tile Pyramid User Data Table Name
 	 */
-	@DatabaseField(columnName = COLUMN_TABLE_NAME, id = true, canBeNull = false, uniqueCombo = true)
+	@DatabaseField(columnName = COLUMN_TABLE_NAME, id = true, canBeNull = false, uniqueCombo = true, readOnly = true)
 	private String tableName;
 
 	/**
@@ -181,15 +181,13 @@ public class TileMatrix {
 		this.contents = contents;
 		if (contents != null) {
 			// Verify the Contents have a tiles data type (Spec Requirement 42)
-			ContentsDataType dataType = contents.getDataType();
-			if (dataType == null
-					|| (dataType != ContentsDataType.TILES && dataType != ContentsDataType.GRIDDED_COVERAGE)) {
+			if (!contents.isTilesTypeOrUnknown()) {
 				throw new GeoPackageException("The "
 						+ Contents.class.getSimpleName() + " of a "
 						+ TileMatrix.class.getSimpleName()
 						+ " must have a data type of "
-						+ ContentsDataType.TILES.getName() + " or "
-						+ ContentsDataType.GRIDDED_COVERAGE.getName());
+						+ ContentsDataType.TILES.getName() + ". actual type: "
+						+ contents.getDataTypeName());
 			}
 			tableName = contents.getId();
 		} else {
@@ -292,8 +290,8 @@ public class TileMatrix {
 	 */
 	private void validateValues(String column, double value) {
 		if (value <= 0.0) {
-			throw new GeoPackageException(column
-					+ " value must be greater than 0: " + value);
+			throw new GeoPackageException(
+					column + " value must be greater than 0: " + value);
 		}
 	}
 

@@ -1,6 +1,6 @@
 package mil.nga.geopackage.extension.related;
 
-import mil.nga.geopackage.core.contents.ContentsDataType;
+import mil.nga.geopackage.contents.ContentsDataType;
 
 /**
  * Spec supported User-Defined Related Data Tables
@@ -24,7 +24,21 @@ public enum RelationType {
 	 * Relate features or attributes to multimedia files such as pictures and
 	 * videos
 	 */
-	MEDIA("media", ContentsDataType.ATTRIBUTES);
+	MEDIA("media", ContentsDataType.ATTRIBUTES),
+
+	/**
+	 * Relate features or attributes with attributes
+	 * 
+	 * @since 3.2.0
+	 */
+	ATTRIBUTES(ContentsDataType.ATTRIBUTES.getName(), ContentsDataType.ATTRIBUTES),
+
+	/**
+	 * Relate features or attributes with tiles
+	 * 
+	 * @since 3.2.0
+	 */
+	TILES(ContentsDataType.TILES.getName(), ContentsDataType.TILES);
 
 	/**
 	 * Relation type name

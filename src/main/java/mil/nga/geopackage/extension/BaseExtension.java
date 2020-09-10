@@ -1,9 +1,11 @@
 package mil.nga.geopackage.extension;
 
 import java.sql.SQLException;
+import java.util.List;
 
 import mil.nga.geopackage.GeoPackageCore;
 import mil.nga.geopackage.GeoPackageException;
+import mil.nga.geopackage.db.GeoPackageDao;
 
 /**
  * Abstract base GeoPackage extension
@@ -68,7 +70,8 @@ public abstract class BaseExtension {
 	 * @return extension
 	 */
 	protected Extensions getOrCreate(String extensionName, String tableName,
-			String columnName, String definition, ExtensionScopeType scopeType) {
+			String columnName, String definition,
+			ExtensionScopeType scopeType) {
 
 		Extensions extension = get(extensionName, tableName, columnName);
 
@@ -87,10 +90,12 @@ public abstract class BaseExtension {
 
 				extensionsDao.create(extension);
 			} catch (SQLException e) {
-				throw new GeoPackageException("Failed to create '"
-						+ extensionName + "' extension for GeoPackage: "
-						+ geoPackage.getName() + ", Table Name: " + tableName
-						+ ", Column Name: " + columnName, e);
+				throw new GeoPackageException(
+						"Failed to create '" + extensionName
+								+ "' extension for GeoPackage: "
+								+ geoPackage.getName() + ", Table Name: "
+								+ tableName + ", Column Name: " + columnName,
+						e);
 			}
 		}
 
@@ -139,9 +144,107 @@ public abstract class BaseExtension {
 	 */
 	protected boolean has(String extensionName, String tableName,
 			String columnName) {
-
 		Extensions extension = get(extensionName, tableName, columnName);
 		return extension != null;
+	}
+
+	/**
+	 * Get the extension for the name and table name
+	 * 
+	 * @param extensionName
+	 *            extension name
+	 * @param tableName
+	 *            table name
+	 * @return extension
+	 */
+	protected List<Extensions> getExtensions(String extensionName,
+			String tableName) {
+
+		List<Extensions> extensions = null;
+		try {
+			if (extensionsDao.isTableExists()) {
+				extensions = extensionsDao.queryByExtension(extensionName,
+						tableName);
+			}
+		} catch (SQLException e) {
+			throw new GeoPackageException("Failed to query for '"
+					+ extensionName + "' extension for GeoPackage: "
+					+ geoPackage.getName() + ", Table Name: " + tableName, e);
+		}
+		return extensions;
+	}
+
+	/**
+	 * Determine if the GeoPackage has the extension
+	 * 
+	 * @param extensionName
+	 *            extension name
+	 * @param tableName
+	 *            table name
+	 * @return true if has extension
+	 */
+	protected boolean has(String extensionName, String tableName) {
+		List<Extensions> extensions = getExtensions(extensionName, tableName);
+		return extensions != null && !extensions.isEmpty();
+	}
+
+	/**
+	 * Get the extension for the name
+	 * 
+	 * @param extensionName
+	 *            extension name
+	 * @return extension
+	 */
+	protected List<Extensions> getExtensions(String extensionName) {
+
+		List<Extensions> extensions = null;
+		try {
+			if (extensionsDao.isTableExists()) {
+				extensions = extensionsDao.queryByExtension(extensionName);
+			}
+		} catch (SQLException e) {
+			throw new GeoPackageException("Failed to query for '"
+					+ extensionName + "' extension for GeoPackage: "
+					+ geoPackage.getName(), e);
+		}
+		return extensions;
+	}
+
+	/**
+	 * Determine if the GeoPackage has the extension
+	 * 
+	 * @param extensionName
+	 *            extension name
+	 * @return true if has extension
+	 */
+	protected boolean has(String extensionName) {
+		List<Extensions> extensions = getExtensions(extensionName);
+		return extensions != null && !extensions.isEmpty();
+	}
+
+	/**
+	 * Verify the GeoPackage is writable and throw an exception if it is not
+	 * 
+	 * @since 4.0.0
+	 */
+	public void verifyWritable() {
+		geoPackage.verifyWritable();
+	}
+
+	/**
+	 * Create a dao
+	 *
+	 * @param type
+	 *            dao class type
+	 * @param <D>
+	 *            dao type
+	 * @param <T>
+	 *            class type
+	 * @return base dao implementation
+	 * @since 4.0.0
+	 */
+	public <D extends GeoPackageDao<T, ?>, T> D createDao(Class<T> type) {
+		return geoPackage.createDao(type);
 	}
 
 }

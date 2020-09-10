@@ -1,15 +1,15 @@
 package mil.nga.geopackage.tiles.matrixset;
 
-import mil.nga.geopackage.BoundingBox;
-import mil.nga.geopackage.GeoPackageException;
-import mil.nga.geopackage.core.contents.Contents;
-import mil.nga.geopackage.core.contents.ContentsDataType;
-import mil.nga.geopackage.core.srs.SpatialReferenceSystem;
-import mil.nga.sf.proj.Projection;
-import mil.nga.sf.proj.ProjectionTransform;
-
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
+
+import mil.nga.geopackage.BoundingBox;
+import mil.nga.geopackage.GeoPackageException;
+import mil.nga.geopackage.contents.Contents;
+import mil.nga.geopackage.contents.ContentsDataType;
+import mil.nga.geopackage.srs.SpatialReferenceSystem;
+import mil.nga.sf.proj.Projection;
+import mil.nga.sf.proj.ProjectionTransform;
 
 /**
  * Tile Matrix Set object. Defines the minimum bounding box (min_x, min_y,
@@ -70,7 +70,7 @@ public class TileMatrixSet {
 	/**
 	 * Tile Pyramid User Data Table Name
 	 */
-	@DatabaseField(columnName = COLUMN_TABLE_NAME, id = true, canBeNull = false)
+	@DatabaseField(columnName = COLUMN_TABLE_NAME, id = true, canBeNull = false, readOnly = true)
 	private String tableName;
 
 	/**
@@ -82,7 +82,7 @@ public class TileMatrixSet {
 	/**
 	 * Unique identifier for each Spatial Reference System within a GeoPackage
 	 */
-	@DatabaseField(columnName = COLUMN_SRS_ID, canBeNull = false)
+	@DatabaseField(columnName = COLUMN_SRS_ID, canBeNull = false, readOnly = true)
 	private long srsId;
 
 	/**
@@ -150,15 +150,13 @@ public class TileMatrixSet {
 		this.contents = contents;
 		if (contents != null) {
 			// Verify the Contents have a tiles data type (Spec Requirement 33)
-			ContentsDataType dataType = contents.getDataType();
-			if (dataType == null
-					|| (dataType != ContentsDataType.TILES && dataType != ContentsDataType.GRIDDED_COVERAGE)) {
+			if (!contents.isTilesTypeOrUnknown()) {
 				throw new GeoPackageException("The "
 						+ Contents.class.getSimpleName() + " of a "
 						+ TileMatrixSet.class.getSimpleName()
 						+ " must have a data type of "
-						+ ContentsDataType.TILES.getName() + " or "
-						+ ContentsDataType.GRIDDED_COVERAGE.getName());
+						+ ContentsDataType.TILES.getName() + ". actual type: "
+						+ contents.getDataTypeName());
 			}
 			tableName = contents.getId();
 		} else {
@@ -238,8 +236,8 @@ public class TileMatrixSet {
 	public BoundingBox getBoundingBox(Projection projection) {
 		BoundingBox boundingBox = getBoundingBox();
 		if (projection != null) {
-			ProjectionTransform transform = getProjection().getTransformation(
-					projection);
+			ProjectionTransform transform = getProjection()
+					.getTransformation(projection);
 			if (!transform.isSameProjection()) {
 				boundingBox = boundingBox.transform(transform);
 			}

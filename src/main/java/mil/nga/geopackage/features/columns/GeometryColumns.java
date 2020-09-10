@@ -1,15 +1,15 @@
 package mil.nga.geopackage.features.columns;
 
-import mil.nga.geopackage.GeoPackageException;
-import mil.nga.geopackage.core.contents.Contents;
-import mil.nga.geopackage.core.contents.ContentsDataType;
-import mil.nga.geopackage.core.srs.SpatialReferenceSystem;
-import mil.nga.geopackage.schema.TableColumnKey;
-import mil.nga.sf.GeometryType;
-import mil.nga.sf.proj.Projection;
-
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
+
+import mil.nga.geopackage.GeoPackageException;
+import mil.nga.geopackage.contents.Contents;
+import mil.nga.geopackage.contents.ContentsDataType;
+import mil.nga.geopackage.db.TableColumnKey;
+import mil.nga.geopackage.srs.SpatialReferenceSystem;
+import mil.nga.sf.GeometryType;
+import mil.nga.sf.proj.Projection;
 
 /**
  * Geometry Columns object. Identifies the geometry columns in tables that
@@ -74,7 +74,7 @@ public class GeometryColumns {
 	/**
 	 * Name of the table containing the geometry column
 	 */
-	@DatabaseField(columnName = COLUMN_TABLE_NAME, id = true, canBeNull = false, uniqueCombo = true)
+	@DatabaseField(columnName = COLUMN_TABLE_NAME, id = true, canBeNull = false, uniqueCombo = true, readOnly = true)
 	private String tableName;
 
 	/**
@@ -99,7 +99,7 @@ public class GeometryColumns {
 	/**
 	 * Unique identifier for each Spatial Reference System within a GeoPackage
 	 */
-	@DatabaseField(columnName = COLUMN_SRS_ID, canBeNull = false)
+	@DatabaseField(columnName = COLUMN_SRS_ID, canBeNull = false, readOnly = true)
 	private long srsId;
 
 	/**
@@ -159,22 +159,33 @@ public class GeometryColumns {
 		columnName = id.getColumnName();
 	}
 
+	/**
+	 * Get the contents
+	 * 
+	 * @return contents
+	 */
 	public Contents getContents() {
 		return contents;
 	}
 
+	/**
+	 * Set the contents
+	 * 
+	 * @param contents
+	 *            contents
+	 */
 	public void setContents(Contents contents) {
 		this.contents = contents;
 		if (contents != null) {
 			// Verify the Contents have a features data type (Spec Requirement
 			// 23)
-			ContentsDataType dataType = contents.getDataType();
-			if (dataType == null || dataType != ContentsDataType.FEATURES) {
+			if (!contents.isFeaturesTypeOrUnknown()) {
 				throw new GeoPackageException("The "
 						+ Contents.class.getSimpleName() + " of a "
 						+ GeometryColumns.class.getSimpleName()
 						+ " must have a data type of "
-						+ ContentsDataType.FEATURES.getName());
+						+ ContentsDataType.FEATURES.getName()
+						+ ". actual type: " + contents.getDataTypeName());
 			}
 			tableName = contents.getId();
 		} else {
@@ -182,56 +193,148 @@ public class GeometryColumns {
 		}
 	}
 
+	/**
+	 * Get the table name
+	 * 
+	 * @return table name
+	 */
 	public String getTableName() {
 		return tableName;
 	}
 
+	/**
+	 * Set the table name
+	 * 
+	 * @param tableName
+	 *            table name
+	 * @since 4.0.0
+	 */
+	public void setTableName(String tableName) {
+		this.tableName = tableName;
+	}
+
+	/**
+	 * Get the column name
+	 * 
+	 * @return column name
+	 */
 	public String getColumnName() {
 		return columnName;
 	}
 
+	/**
+	 * Set the column name
+	 * 
+	 * @param columnName
+	 *            column name
+	 */
 	public void setColumnName(String columnName) {
 		this.columnName = columnName;
 	}
 
+	/**
+	 * Get the geometry type
+	 * 
+	 * @return geometry type
+	 */
 	public GeometryType getGeometryType() {
 		return GeometryType.fromName(geometryTypeName);
 	}
 
+	/**
+	 * Set the geometry type
+	 * 
+	 * @param geometryType
+	 *            geometry type
+	 */
 	public void setGeometryType(GeometryType geometryType) {
 		this.geometryTypeName = geometryType.getName();
 	}
 
+	/**
+	 * Get the geometry type name
+	 * 
+	 * @return geometry type name
+	 */
 	public String getGeometryTypeName() {
 		return geometryTypeName;
 	}
 
+	/**
+	 * Get the srs
+	 * 
+	 * @return srs
+	 */
 	public SpatialReferenceSystem getSrs() {
 		return srs;
 	}
 
+	/**
+	 * Set the srs
+	 * 
+	 * @param srs
+	 *            srs
+	 */
 	public void setSrs(SpatialReferenceSystem srs) {
 		this.srs = srs;
 		srsId = srs != null ? srs.getId() : -1;
 	}
 
+	/**
+	 * Get the srs id
+	 * 
+	 * @return srs id
+	 */
 	public long getSrsId() {
 		return srsId;
 	}
 
+	/**
+	 * Set the srs id
+	 * 
+	 * @param srsId
+	 *            srs id
+	 * @since 4.0.0
+	 */
+	public void setSrsId(long srsId) {
+		this.srsId = srsId;
+	}
+
+	/**
+	 * Get the z
+	 * 
+	 * @return z
+	 */
 	public byte getZ() {
 		return z;
 	}
 
+	/**
+	 * Set the z
+	 * 
+	 * @param z
+	 *            z
+	 */
 	public void setZ(byte z) {
 		validateValues(COLUMN_Z, z);
 		this.z = z;
 	}
 
+	/**
+	 * Get the m
+	 * 
+	 * @return m
+	 */
 	public byte getM() {
 		return m;
 	}
 
+	/**
+	 * Set the m
+	 * 
+	 * @param m
+	 *            m
+	 */
 	public void setM(byte m) {
 		validateValues(COLUMN_M, m);
 		this.m = m;
@@ -256,9 +359,8 @@ public class GeometryColumns {
 	 */
 	private void validateValues(String column, byte value) {
 		if (value < 0 || value > 2) {
-			throw new GeoPackageException(
-					column
-							+ " value must be 0 for prohibited, 1 for mandatory, or 2 for optional");
+			throw new GeoPackageException(column
+					+ " value must be 0 for prohibited, 1 for mandatory, or 2 for optional");
 		}
 	}
 

@@ -10,14 +10,21 @@ public class GeoPackageConstants {
 	/**
 	 * Extension to GeoPackage files
 	 */
-	public static final String GEOPACKAGE_EXTENSION = "gpkg";
+	public static final String EXTENSION = "gpkg";
 
 	/**
 	 * Extension to GeoPackage extension files
 	 * 
 	 * @deprecated in GeoPackage version 1.2
 	 */
-	public static final String GEOPACKAGE_EXTENDED_EXTENSION = "gpkx";
+	public static final String EXTENDED_EXTENSION = "gpkx";
+
+	/**
+	 * GeoPackage Media Type (MIME type)
+	 * 
+	 * @since 3.5.0
+	 */
+	public static final String MEDIA_TYPE = "application/geopackage+sqlite3";
 
 	/**
 	 * GeoPackage application id
@@ -29,17 +36,17 @@ public class GeoPackageConstants {
 	 * 
 	 * @since 1.2.1
 	 */
-	public static final int USER_VERSION = 10200;
+	public static final int USER_VERSION = 10300;
 
 	/**
 	 * Expected magic number
 	 */
-	public static final String GEO_PACKAGE_GEOMETRY_MAGIC_NUMBER = "GP";
+	public static final String GEOMETRY_MAGIC_NUMBER = "GP";
 
 	/**
 	 * Expected version 1 value
 	 */
-	public static final byte GEO_PACKAGE_GEOMETRY_VERSION_1 = 0;
+	public static final byte GEOMETRY_VERSION_1 = 0;
 
 	/**
 	 * SQLite header string prefix
@@ -47,9 +54,16 @@ public class GeoPackageConstants {
 	public static final String SQLITE_HEADER_PREFIX = "SQLite format 3";
 
 	/**
+	 * SQLite default application id
+	 * 
+	 * @since 4.0.0
+	 */
+	public static final String SQLITE_APPLICATION_ID = "SQLite";
+
+	/**
 	 * GeoPackage author
 	 */
-	public static final String GEO_PACKAGE_EXTENSION_AUTHOR = GEOPACKAGE_EXTENSION;
+	public static final String EXTENSION_AUTHOR = EXTENSION;
 
 	/**
 	 * Geometry extension prefix

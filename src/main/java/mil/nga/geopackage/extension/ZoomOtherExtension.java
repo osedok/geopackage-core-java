@@ -9,6 +9,8 @@ import mil.nga.geopackage.tiles.user.TileTable;
 /**
  * Zoom Other Intervals extension
  * 
+ * https://www.geopackage.org/spec/#extension_zoom_other_intervals
+ * 
  * @author osbornb
  * @since 1.1.8
  */
@@ -22,7 +24,7 @@ public class ZoomOtherExtension extends BaseExtension {
 	/**
 	 * Extension name
 	 */
-	public static final String EXTENSION_NAME = GeoPackageConstants.GEO_PACKAGE_EXTENSION_AUTHOR
+	public static final String EXTENSION_NAME = GeoPackageConstants.EXTENSION_AUTHOR
 			+ Extensions.EXTENSION_NAME_DIVIDER + NAME;
 
 	/**

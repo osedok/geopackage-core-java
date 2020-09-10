@@ -2,15 +2,15 @@ package mil.nga.geopackage.extension.related;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import mil.nga.geopackage.GeoPackageConstants;
 import mil.nga.geopackage.GeoPackageCore;
 import mil.nga.geopackage.GeoPackageException;
-import mil.nga.geopackage.core.contents.Contents;
-import mil.nga.geopackage.core.contents.ContentsDao;
+import mil.nga.geopackage.attributes.AttributesTable;
+import mil.nga.geopackage.contents.Contents;
+import mil.nga.geopackage.contents.ContentsDao;
+import mil.nga.geopackage.db.GeoPackageCoreConnection;
 import mil.nga.geopackage.extension.BaseExtension;
 import mil.nga.geopackage.extension.ExtensionScopeType;
 import mil.nga.geopackage.extension.Extensions;
@@ -18,11 +18,20 @@ import mil.nga.geopackage.extension.related.media.MediaTable;
 import mil.nga.geopackage.extension.related.simple.SimpleAttributesTable;
 import mil.nga.geopackage.property.GeoPackageProperties;
 import mil.nga.geopackage.property.PropertyConstants;
+import mil.nga.geopackage.tiles.user.TileTable;
+import mil.nga.geopackage.user.UserColumn;
+import mil.nga.geopackage.user.UserTable;
+import mil.nga.geopackage.user.custom.UserCustomColumn;
+import mil.nga.geopackage.user.custom.UserCustomTable;
+import mil.nga.geopackage.user.custom.UserCustomTableReader;
 
 /**
  * Related Tables core extension
  * 
+ * http://docs.opengeospatial.org/is/18-000/18-000.html
+ * 
  * @author jyutzler
+ * @author osbornb
  * @since 3.0.1
  */
 public abstract class RelatedTablesCoreExtension extends BaseExtension {
@@ -30,7 +39,7 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 	/**
 	 * Extension author
 	 */
-	public static final String EXTENSION_AUTHOR = GeoPackageConstants.GEO_PACKAGE_EXTENSION_AUTHOR;
+	public static final String EXTENSION_AUTHOR = GeoPackageConstants.EXTENSION_AUTHOR;
 
 	/**
 	 * Extension name without the author
@@ -39,24 +48,21 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 
 	/**
 	 * Extension, with author and name
-	 * 
-	 * TODO Remove the commented sections when extension is adopted
 	 */
-	public static final String EXTENSION_NAME = /*
-												 * Extensions.buildExtensionName(
-												 * EXTENSION_AUTHOR,
-												 */EXTENSION_NAME_NO_AUTHOR/* ) */;
+	public static final String EXTENSION_NAME = Extensions
+			.buildExtensionName(EXTENSION_AUTHOR, EXTENSION_NAME_NO_AUTHOR);
 
 	/**
 	 * Extension definition URL
 	 */
 	public static final String EXTENSION_DEFINITION = GeoPackageProperties
-			.getProperty(PropertyConstants.EXTENSIONS, EXTENSION_NAME_NO_AUTHOR);
+			.getProperty(PropertyConstants.EXTENSIONS,
+					EXTENSION_NAME_NO_AUTHOR);
 
 	/**
 	 * Extended Relations DAO
 	 */
-	private final ExtendedRelationsDao extendedRelationsDao;
+	private ExtendedRelationsDao extendedRelationsDao;
 
 	/**
 	 * Constructor
@@ -67,16 +73,7 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 	 */
 	protected RelatedTablesCoreExtension(GeoPackageCore geoPackage) {
 		super(geoPackage);
-		extendedRelationsDao = geoPackage.getExtendedRelationsDao();
-	}
-
-	/**
-	 * Get the extended relations DAO
-	 * 
-	 * @return extended relations DAO
-	 */
-	public ExtendedRelationsDao getExtendedRelationsDao() {
-		return extendedRelationsDao;
+		extendedRelationsDao = getExtendedRelationsDao();
 	}
 
 	/**
@@ -87,7 +84,7 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 	private Extensions getOrCreate() {
 
 		// Create table
-		geoPackage.createExtendedRelationsTable();
+		createExtendedRelationsTable();
 
 		Extensions extension = getOrCreate(EXTENSION_NAME,
 				ExtendedRelation.TABLE_NAME, null, EXTENSION_DEFINITION,
@@ -119,7 +116,8 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 	 * @return true if has extension
 	 */
 	public boolean has() {
-		return has(EXTENSION_NAME, ExtendedRelation.TABLE_NAME, null);
+		return has(EXTENSION_NAME, ExtendedRelation.TABLE_NAME, null)
+				&& geoPackage.isTable(ExtendedRelation.TABLE_NAME);
 	}
 
 	/**
@@ -134,29 +132,102 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 	}
 
 	/**
+	 * Get a Extended Relations DAO
+	 * 
+	 * @return extended relations dao
+	 */
+	public ExtendedRelationsDao getExtendedRelationsDao() {
+		if (extendedRelationsDao == null) {
+			extendedRelationsDao = getExtendedRelationsDao(geoPackage);
+		}
+		return extendedRelationsDao;
+	}
+
+	/**
+	 * Get a Extended Relations DAO
+	 * 
+	 * @param geoPackage
+	 *            GeoPackage
+	 * @return extended relations dao
+	 * @since 4.0.0
+	 */
+	public static ExtendedRelationsDao getExtendedRelationsDao(
+			GeoPackageCore geoPackage) {
+		return ExtendedRelationsDao.create(geoPackage);
+	}
+
+	/**
+	 * Get a Extended Relations DAO
+	 * 
+	 * @param db
+	 *            database connection
+	 * @return extended relations dao
+	 * @since 4.0.0
+	 */
+	public static ExtendedRelationsDao getExtendedRelationsDao(
+			GeoPackageCoreConnection db) {
+		return ExtendedRelationsDao.create(db);
+	}
+
+	/**
+	 * Create the Extended Relations Table if it does not exist
+	 * 
+	 * @return true if created
+	 * @since 4.0.0
+	 */
+	public boolean createExtendedRelationsTable() {
+		verifyWritable();
+
+		boolean created = false;
+
+		try {
+			if (!extendedRelationsDao.isTableExists()) {
+				created = geoPackage.getTableCreator()
+						.createExtendedRelations() > 0;
+			}
+		} catch (SQLException e) {
+			throw new GeoPackageException("Failed to check if "
+					+ ExtendedRelation.class.getSimpleName()
+					+ " table exists and create it", e);
+		}
+
+		return created;
+	}
+
+	/**
 	 * Get the primary key of a table
 	 * 
 	 * @param tableName
 	 *            table name
 	 * @return the column name
 	 */
-	public abstract String getPrimaryKeyColumnName(String tableName);
+	public String getPrimaryKeyColumnName(String tableName) {
+		UserCustomTable table = UserCustomTableReader
+				.readTable(geoPackage.getDatabase(), tableName);
+		UserCustomColumn pkColumn = table.getPkColumn();
+		if (pkColumn == null) {
+			throw new GeoPackageException(
+					"Found no primary key for table " + tableName);
+		}
+		return pkColumn.getName();
+	}
 
 	/**
-	 * Set the contents in the user related table
+	 * Set the contents in the user table
 	 * 
 	 * @param table
-	 *            user related table
+	 *            user table
 	 */
-	protected void setContents(UserRelatedTable table) {
+	public void setContents(UserTable<? extends UserColumn> table) {
 		ContentsDao dao = geoPackage.getContentsDao();
 		Contents contents = null;
 		try {
 			contents = dao.queryForId(table.getTableName());
 		} catch (SQLException e) {
-			throw new GeoPackageException("Failed to retrieve "
-					+ Contents.class.getSimpleName() + " for table name: "
-					+ table.getTableName(), e);
+			throw new GeoPackageException(
+					"Failed to retrieve " + Contents.class.getSimpleName()
+							+ " for table name: " + table.getTableName(),
+					e);
 		}
 		if (contents == null) {
 			throw new GeoPackageException(
@@ -333,16 +404,17 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 		extendedRelation
 				.setBasePrimaryColumn(getPrimaryKeyColumnName(baseTableName));
 		extendedRelation.setRelatedTableName(relatedTableName);
-		extendedRelation
-				.setRelatedPrimaryColumn(getPrimaryKeyColumnName(relatedTableName));
+		extendedRelation.setRelatedPrimaryColumn(
+				getPrimaryKeyColumnName(relatedTableName));
 		extendedRelation.setMappingTableName(userMappingTable.getTableName());
 		extendedRelation.setRelationName(relationName);
 		try {
 			extendedRelationsDao.create(extendedRelation);
 		} catch (SQLException e) {
-			throw new GeoPackageException("Failed to add relationship '"
-					+ relationName + "' between " + baseTableName + " and "
-					+ relatedTableName, e);
+			throw new GeoPackageException(
+					"Failed to add relationship '" + relationName + "' between "
+							+ baseTableName + " and " + relatedTableName,
+					e);
 		}
 		return extendedRelation;
 	}
@@ -361,11 +433,8 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 	 */
 	public ExtendedRelation addRelationship(String baseTableName,
 			UserRelatedTable relatedTable, String mappingTableName) {
-
-		UserMappingTable userMappingTable = UserMappingTable
-				.create(mappingTableName);
-
-		return addRelationship(baseTableName, relatedTable, userMappingTable);
+		return addRelationship(baseTableName, relatedTable,
+				relatedTable.getRelationName(), mappingTableName);
 	}
 
 	/**
@@ -382,12 +451,100 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 	 */
 	public ExtendedRelation addRelationship(String baseTableName,
 			UserRelatedTable relatedTable, UserMappingTable userMappingTable) {
+		return addRelationship(baseTableName, relatedTable,
+				relatedTable.getRelationName(), userMappingTable);
+	}
+
+	/**
+	 * Adds a relationship between the base and user related table. Creates a
+	 * default user mapping table and the related table if needed.
+	 * 
+	 * @param baseTableName
+	 *            base table name
+	 * @param relatedTable
+	 *            user related table
+	 * @param mappingTableName
+	 *            user mapping table name
+	 * @return The relationship that was added
+	 * @since 3.2.0
+	 */
+	public ExtendedRelation addRelationship(String baseTableName,
+			UserTable<? extends UserColumn> relatedTable,
+			String mappingTableName) {
+		return addRelationship(baseTableName, relatedTable,
+				relatedTable.getDataType(), mappingTableName);
+	}
+
+	/**
+	 * Adds a relationship between the base and user related table. Creates the
+	 * user mapping table and related table if needed.
+	 * 
+	 * @param baseTableName
+	 *            base table name
+	 * @param relatedTable
+	 *            user related table
+	 * @param userMappingTable
+	 *            user mapping table
+	 * @return The relationship that was added
+	 * @since 3.2.0
+	 */
+	public ExtendedRelation addRelationship(String baseTableName,
+			UserTable<? extends UserColumn> relatedTable,
+			UserMappingTable userMappingTable) {
+		return addRelationship(baseTableName, relatedTable,
+				relatedTable.getDataType(), userMappingTable);
+	}
+
+	/**
+	 * Adds a relationship between the base and user related table. Creates a
+	 * default user mapping table and the related table if needed.
+	 * 
+	 * @param baseTableName
+	 *            base table name
+	 * @param relatedTable
+	 *            user related table
+	 * @param relationName
+	 *            relation name
+	 * @param mappingTableName
+	 *            user mapping table name
+	 * @return The relationship that was added
+	 * @since 3.2.0
+	 */
+	public ExtendedRelation addRelationship(String baseTableName,
+			UserTable<? extends UserColumn> relatedTable, String relationName,
+			String mappingTableName) {
+
+		UserMappingTable userMappingTable = UserMappingTable
+				.create(mappingTableName);
+
+		return addRelationship(baseTableName, relatedTable, relationName,
+				userMappingTable);
+	}
+
+	/**
+	 * Adds a relationship between the base and user related table. Creates the
+	 * user mapping table and related table if needed.
+	 * 
+	 * @param baseTableName
+	 *            base table name
+	 * @param relatedTable
+	 *            user related table
+	 * @param relationName
+	 *            relation name
+	 * @param userMappingTable
+	 *            user mapping table
+	 * @return The relationship that was added
+	 * @since 3.2.0
+	 */
+	public ExtendedRelation addRelationship(String baseTableName,
+			UserTable<? extends UserColumn> relatedTable, String relationName,
+			UserMappingTable userMappingTable) {
 
 		// Create the related table if needed
 		createRelatedTable(relatedTable);
 
 		return addRelationship(baseTableName, relatedTable.getTableName(),
-				userMappingTable, relatedTable.getRelationName());
+				userMappingTable, relationName);
 	}
 
 	/**
@@ -504,6 +661,160 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 	}
 
 	/**
+	 * Adds an attributes relationship between the base table and related
+	 * attributes table. Creates a default user mapping table if needed.
+	 * 
+	 * @param baseTableName
+	 *            base table name
+	 * @param relatedAttributesTableName
+	 *            related attributes table name
+	 * @param mappingTableName
+	 *            mapping table name
+	 * @return The relationship that was added
+	 * @since 3.2.0
+	 */
+	public ExtendedRelation addAttributesRelationship(String baseTableName,
+			String relatedAttributesTableName, String mappingTableName) {
+		return addRelationship(baseTableName, relatedAttributesTableName,
+				mappingTableName, RelationType.ATTRIBUTES);
+	}
+
+	/**
+	 * Adds an attributes relationship between the base table and related
+	 * attributes table. Creates the user mapping table if needed.
+	 * 
+	 * @param baseTableName
+	 *            base table name
+	 * @param relatedAttributesTableName
+	 *            related attributes table name
+	 * @param userMappingTable
+	 *            user mapping table
+	 * @return The relationship that was added
+	 * @since 3.2.0
+	 */
+	public ExtendedRelation addAttributesRelationship(String baseTableName,
+			String relatedAttributesTableName,
+			UserMappingTable userMappingTable) {
+		return addRelationship(baseTableName, relatedAttributesTableName,
+				userMappingTable, RelationType.ATTRIBUTES);
+	}
+
+	/**
+	 * Adds an attributes relationship between the base table and user
+	 * attributes related table. Creates a default user mapping table and the
+	 * attributes table if needed.
+	 * 
+	 * @param baseTableName
+	 *            base table name
+	 * @param attributesTable
+	 *            user attributes table
+	 * @param mappingTableName
+	 *            user mapping table name
+	 * @return The relationship that was added
+	 * @since 3.2.0
+	 */
+	public ExtendedRelation addAttributesRelationship(String baseTableName,
+			AttributesTable attributesTable, String mappingTableName) {
+		return addRelationship(baseTableName, attributesTable,
+				mappingTableName);
+	}
+
+	/**
+	 * Adds an attributes relationship between the base table and user
+	 * attributes related table. Creates the user mapping table and an
+	 * attributes table if needed.
+	 * 
+	 * @param baseTableName
+	 *            base table name
+	 * @param attributesTable
+	 *            user attributes table
+	 * @param userMappingTable
+	 *            user mapping table
+	 * @return The relationship that was added
+	 * @since 3.2.0
+	 */
+	public ExtendedRelation addAttributesRelationship(String baseTableName,
+			AttributesTable attributesTable,
+			UserMappingTable userMappingTable) {
+		return addRelationship(baseTableName, attributesTable,
+				userMappingTable);
+	}
+
+	/**
+	 * Adds a tiles relationship between the base table and related tiles table.
+	 * Creates a default user mapping table if needed.
+	 * 
+	 * @param baseTableName
+	 *            base table name
+	 * @param relatedTilesTableName
+	 *            related tiles table name
+	 * @param mappingTableName
+	 *            mapping table name
+	 * @return The relationship that was added
+	 * @since 3.2.0
+	 */
+	public ExtendedRelation addTilesRelationship(String baseTableName,
+			String relatedTilesTableName, String mappingTableName) {
+		return addRelationship(baseTableName, relatedTilesTableName,
+				mappingTableName, RelationType.TILES);
+	}
+
+	/**
+	 * Adds a tiles relationship between the base table and related tiles table.
+	 * Creates the user mapping table if needed.
+	 * 
+	 * @param baseTableName
+	 *            base table name
+	 * @param relatedTilesTableName
+	 *            related tiles table name
+	 * @param userMappingTable
+	 *            user mapping table
+	 * @return The relationship that was added
+	 * @since 3.2.0
+	 */
+	public ExtendedRelation addTilesRelationship(String baseTableName,
+			String relatedTilesTableName, UserMappingTable userMappingTable) {
+		return addRelationship(baseTableName, relatedTilesTableName,
+				userMappingTable, RelationType.TILES);
+	}
+
+	/**
+	 * Adds a tiles relationship between the base table and user tiles related
+	 * table. Creates a default user mapping table and the tile table if needed.
+	 * 
+	 * @param baseTableName
+	 *            base table name
+	 * @param tileTable
+	 *            user tile table
+	 * @param mappingTableName
+	 *            user mapping table name
+	 * @return The relationship that was added
+	 * @since 3.2.0
+	 */
+	public ExtendedRelation addTilesRelationship(String baseTableName,
+			TileTable tileTable, String mappingTableName) {
+		return addRelationship(baseTableName, tileTable, mappingTableName);
+	}
+
+	/**
+	 * Adds a tiles relationship between the base table and user tiles related
+	 * table. Creates the user mapping table and a tile table if needed.
+	 * 
+	 * @param baseTableName
+	 *            base table name
+	 * @param tileTable
+	 *            user tile table
+	 * @param userMappingTable
+	 *            user mapping table
+	 * @return The relationship that was added
+	 * @since 3.2.0
+	 */
+	public ExtendedRelation addTilesRelationship(String baseTableName,
+			TileTable tileTable, UserMappingTable userMappingTable) {
+		return addRelationship(baseTableName, tileTable, userMappingTable);
+	}
+
+	/**
 	 * Validate that the relation name is valid between the base and related
 	 * table
 	 * 
@@ -518,12 +829,12 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 			String relatedTableName, String relationName) {
 
 		// Verify the base and related tables exist
-		if (!geoPackage.isTable(baseTableName)) {
+		if (!geoPackage.isTableOrView(baseTableName)) {
 			throw new GeoPackageException(
 					"Base Relationship table does not exist: " + baseTableName
 							+ ", Relation: " + relationName);
 		}
-		if (!geoPackage.isTable(relatedTableName)) {
+		if (!geoPackage.isTableOrView(relatedTableName)) {
 			throw new GeoPackageException(
 					"Related Relationship table does not exist: "
 							+ relatedTableName + ", Relation: " + relationName);
@@ -553,39 +864,12 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 
 		if (relationType != null) {
 
-			switch (relationType) {
-			case FEATURES:
-				if (!geoPackage.isFeatureTable(baseTableName)) {
-					throw new GeoPackageException(
-							"The base table must be a feature table. Relation: "
-									+ relationType.getName() + ", Base Table: "
-									+ baseTableName + ", Type: "
-									+ geoPackage.getTableType(baseTableName));
-				}
-				if (!geoPackage.isFeatureTable(relatedTableName)) {
-					throw new GeoPackageException(
-							"The related table must be a feature table. Relation: "
-									+ relationType.getName()
-									+ ", Related Table: " + relatedTableName
-									+ ", Type: "
-									+ geoPackage.getTableType(relatedTableName));
-				}
-				break;
-			case SIMPLE_ATTRIBUTES:
-			case MEDIA:
-				if (!geoPackage.isTableType(relationType.getDataType(),
-						relatedTableName)) {
-					throw new GeoPackageException(
-							"The related table must be a "
-									+ relationType.getDataType()
-									+ " table. Related Table: "
-									+ relatedTableName + ", Type: "
-									+ geoPackage.getTableType(relatedTableName));
-				}
-				break;
-			default:
-				throw new GeoPackageException("Unsupported relation type: "
-						+ relationType);
+			if (!geoPackage.isTableType(relatedTableName,
+					relationType.getDataType())) {
+				throw new GeoPackageException("The related table must be a "
+						+ relationType.getDataType() + " table. Related Table: "
+						+ relatedTableName + ", Type: "
+						+ geoPackage.getTableType(relatedTableName));
 			}
 
 		}
@@ -625,7 +909,7 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 		String userMappingTableName = userMappingTable.getTableName();
 		getOrCreate(userMappingTableName);
 
-		if (!geoPackage.isTable(userMappingTableName)) {
+		if (!geoPackage.isTableOrView(userMappingTableName)) {
 
 			geoPackage.createUserTable(userMappingTable);
 
@@ -643,13 +927,15 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 	 * @param relatedTable
 	 *            user related table
 	 * @return true if created, false if the table already existed
+	 * @since 3.2.0
 	 */
-	public boolean createRelatedTable(UserRelatedTable relatedTable) {
+	public boolean createRelatedTable(
+			UserTable<? extends UserColumn> relatedTable) {
 
 		boolean created = false;
 
 		String relatedTableName = relatedTable.getTableName();
-		if (!geoPackage.isTable(relatedTableName)) {
+		if (!geoPackage.isTableOrView(relatedTableName)) {
 
 			geoPackage.createUserTable(relatedTable);
 
@@ -657,7 +943,7 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 				// Create the contents
 				Contents contents = new Contents();
 				contents.setTableName(relatedTableName);
-				contents.setDataTypeString(relatedTable.getDataType());
+				contents.setDataTypeName(relatedTable.getDataType());
 				contents.setIdentifier(relatedTableName);
 				ContentsDao contentsDao = geoPackage.getContentsDao();
 				contentsDao.create(contents);
@@ -672,7 +958,8 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 				geoPackage.deleteTableQuietly(relatedTableName);
 				throw new GeoPackageException(
 						"Failed to create table and metadata: "
-								+ relatedTableName, e);
+								+ relatedTableName,
+						e);
 			}
 
 			created = true;
@@ -710,7 +997,8 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 	 *            relation name
 	 */
 	public void removeRelationship(String baseTableName,
-			String relatedTableName, String relationAuthor, String relationName) {
+			String relatedTableName, String relationAuthor,
+			String relationName) {
 		removeRelationship(baseTableName, relatedTableName,
 				buildRelationName(relationAuthor, relationName));
 	}
@@ -722,9 +1010,20 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 	 *            extended relation
 	 */
 	public void removeRelationship(ExtendedRelation extendedRelation) {
-		removeRelationship(extendedRelation.getBaseTableName(),
-				extendedRelation.getRelatedTableName(),
-				extendedRelation.getRelationName());
+
+		try {
+			if (extendedRelationsDao.isTableExists()) {
+				geoPackage.deleteTable(extendedRelation.getMappingTableName());
+				extendedRelationsDao.delete(extendedRelation);
+			}
+		} catch (SQLException e) {
+			throw new GeoPackageException("Failed to remove relationship '"
+					+ extendedRelation.getRelationName() + "' between "
+					+ extendedRelation.getBaseTableName() + " and "
+					+ extendedRelation.getRelatedTableName()
+					+ " with mapping table "
+					+ extendedRelation.getMappingTableName(), e);
+		}
 	}
 
 	/**
@@ -742,20 +1041,11 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 
 		try {
 			if (extendedRelationsDao.isTableExists()) {
-				Map<String, Object> fieldValues = new HashMap<String, Object>();
-				fieldValues.put(ExtendedRelation.COLUMN_BASE_TABLE_NAME,
-						baseTableName);
-				fieldValues.put(ExtendedRelation.COLUMN_RELATED_TABLE_NAME,
-						relatedTableName);
-				fieldValues.put(ExtendedRelation.COLUMN_RELATION_NAME,
-						relationName);
-				List<ExtendedRelation> extendedRelations = extendedRelationsDao
-						.queryForFieldValues(fieldValues);
+				List<ExtendedRelation> extendedRelations = getRelations(
+						baseTableName, relatedTableName, relationName, null);
 				for (ExtendedRelation extendedRelation : extendedRelations) {
-					geoPackage.deleteTable(extendedRelation
-							.getMappingTableName());
+					removeRelationship(extendedRelation);
 				}
-				extendedRelationsDao.delete(extendedRelations);
 			}
 		} catch (SQLException e) {
 			throw new GeoPackageException("Failed to remove relationship '"
@@ -763,6 +1053,52 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 					+ relatedTableName, e);
 		}
 
+	}
+
+	/**
+	 * Remove all relationships that include the table
+	 * 
+	 * @param table
+	 *            base or related table name
+	 * @since 3.2.0
+	 */
+	public void removeRelationships(String table) {
+		try {
+			if (extendedRelationsDao.isTableExists()) {
+				List<ExtendedRelation> extendedRelations = extendedRelationsDao
+						.getTableRelations(table);
+				for (ExtendedRelation extendedRelation : extendedRelations) {
+					removeRelationship(extendedRelation);
+				}
+			}
+		} catch (SQLException e) {
+			throw new GeoPackageException(
+					"Failed to remove relationships for table: " + table, e);
+		}
+	}
+
+	/**
+	 * Remove all relationships with the mapping table
+	 * 
+	 * @param mappingTable
+	 *            mapping table
+	 * @since 3.2.0
+	 */
+	public void removeRelationshipsWithMappingTable(String mappingTable) {
+		try {
+			if (extendedRelationsDao.isTableExists()) {
+				List<ExtendedRelation> extendedRelations = getRelations(null,
+						null, mappingTable);
+				for (ExtendedRelation extendedRelation : extendedRelations) {
+					removeRelationship(extendedRelation);
+				}
+			}
+		} catch (SQLException e) {
+			throw new GeoPackageException(
+					"Failed to remove relationships for mapping table: "
+							+ mappingTable,
+					e);
+		}
 	}
 
 	/**
@@ -775,8 +1111,8 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 				List<ExtendedRelation> extendedRelations = extendedRelationsDao
 						.queryForAll();
 				for (ExtendedRelation extendedRelation : extendedRelations) {
-					geoPackage.deleteTable(extendedRelation
-							.getMappingTableName());
+					geoPackage.deleteTable(
+							extendedRelation.getMappingTableName());
 				}
 				geoPackage.dropTable(extendedRelationsDao.getTableName());
 			}
@@ -786,8 +1122,199 @@ public abstract class RelatedTablesCoreExtension extends BaseExtension {
 		} catch (SQLException e) {
 			throw new GeoPackageException(
 					"Failed to delete Related Tables extension and table. GeoPackage: "
-							+ geoPackage.getName(), e);
+							+ geoPackage.getName(),
+					e);
 		}
+	}
+
+	/**
+	 * Determine if has one or more relations matching the base table and
+	 * related table
+	 * 
+	 * @param baseTable
+	 *            base table name
+	 * @param relatedTable
+	 *            related table name
+	 * @return true if has relations
+	 * @throws SQLException
+	 *             upon failure
+	 * @since 3.2.0
+	 */
+	public boolean hasRelations(String baseTable, String relatedTable)
+			throws SQLException {
+		return hasRelations(baseTable, null, relatedTable, null, null, null);
+	}
+
+	/**
+	 * Get the relations to the base table and related table
+	 * 
+	 * @param baseTable
+	 *            base table name
+	 * @param relatedTable
+	 *            related table name
+	 * @return extended relations
+	 * @since 3.2.0
+	 */
+	public List<ExtendedRelation> getRelations(String baseTable,
+			String relatedTable) {
+		return getRelations(baseTable, null, relatedTable, null, null, null);
+	}
+
+	/**
+	 * Determine if has one or more relations matching the non null provided
+	 * values
+	 * 
+	 * @param baseTable
+	 *            base table name
+	 * @param relatedTable
+	 *            related table name
+	 * @param mappingTable
+	 *            mapping table name
+	 * @return true if has relations
+	 * @throws SQLException
+	 *             upon failure
+	 * @since 3.2.0
+	 */
+	public boolean hasRelations(String baseTable, String relatedTable,
+			String mappingTable) throws SQLException {
+		return hasRelations(baseTable, null, relatedTable, null, null,
+				mappingTable);
+	}
+
+	/**
+	 * Get the relations matching the non null provided values
+	 * 
+	 * @param baseTable
+	 *            base table name
+	 * @param relatedTable
+	 *            related table name
+	 * @param mappingTable
+	 *            mapping table name
+	 * @return extended relations
+	 * @throws SQLException
+	 *             upon failure
+	 * @since 3.2.0
+	 */
+	public List<ExtendedRelation> getRelations(String baseTable,
+			String relatedTable, String mappingTable) throws SQLException {
+		return getRelations(baseTable, null, relatedTable, null, null,
+				mappingTable);
+	}
+
+	/**
+	 * Determine if has one or more relations matching the non null provided
+	 * values
+	 * 
+	 * @param baseTable
+	 *            base table name
+	 * @param relatedTable
+	 *            related table name
+	 * @param relation
+	 *            relation name
+	 * @param mappingTable
+	 *            mapping table name
+	 * @return true if has relations
+	 * @since 3.2.0
+	 */
+	public boolean hasRelations(String baseTable, String relatedTable,
+			String relation, String mappingTable) {
+		return hasRelations(baseTable, null, relatedTable, null, relation,
+				mappingTable);
+	}
+
+	/**
+	 * Get the relations matching the non null provided values
+	 * 
+	 * @param baseTable
+	 *            base table name
+	 * @param relatedTable
+	 *            related table name
+	 * @param relation
+	 *            relation name
+	 * @param mappingTable
+	 *            mapping table name
+	 * @return extended relations
+	 * @throws SQLException
+	 *             upon failure
+	 * @since 3.2.0
+	 */
+	public List<ExtendedRelation> getRelations(String baseTable,
+			String relatedTable, String relation, String mappingTable)
+			throws SQLException {
+		return getRelations(baseTable, null, relatedTable, null, relation,
+				mappingTable);
+	}
+
+	/**
+	 * Determine if has one or more relations matching the non null provided
+	 * values
+	 * 
+	 * @param baseTable
+	 *            base table name
+	 * @param baseColumn
+	 *            base primary column name
+	 * @param relatedTable
+	 *            related table name
+	 * @param relatedColumn
+	 *            related primary column name
+	 * @param relation
+	 *            relation name
+	 * @param mappingTable
+	 *            mapping table name
+	 * @return true if has relations
+	 * @since 3.2.0
+	 */
+	public boolean hasRelations(String baseTable, String baseColumn,
+			String relatedTable, String relatedColumn, String relation,
+			String mappingTable) {
+		return !getRelations(baseTable, baseColumn, relatedTable, relatedColumn,
+				relation, mappingTable).isEmpty();
+	}
+
+	/**
+	 * Get the relations matching the non null provided values
+	 * 
+	 * @param baseTable
+	 *            base table name
+	 * @param baseColumn
+	 *            base primary column name
+	 * @param relatedTable
+	 *            related table name
+	 * @param relatedColumn
+	 *            related primary column name
+	 * @param relation
+	 *            relation name
+	 * @param mappingTable
+	 *            mapping table name
+	 * @return extended relations
+	 * @since 3.2.0
+	 */
+	public List<ExtendedRelation> getRelations(String baseTable,
+			String baseColumn, String relatedTable, String relatedColumn,
+			String relation, String mappingTable) {
+
+		List<ExtendedRelation> relations = null;
+
+		try {
+			if (extendedRelationsDao.isTableExists()) {
+				relations = extendedRelationsDao.getRelations(baseTable,
+						baseColumn, relatedTable, relatedColumn, relation,
+						mappingTable);
+			} else {
+				relations = new ArrayList<>();
+			}
+		} catch (SQLException e) {
+			throw new GeoPackageException(
+					"Failed to get relationships. Base Table: " + baseTable
+							+ ", Base Column: " + baseColumn
+							+ ", Related Table: " + relatedTable
+							+ ", Related Column: " + relatedColumn
+							+ ", Relation: " + relation + ", Mapping Table: "
+							+ mappingTable,
+					e);
+		}
+
+		return relations;
 	}
 
 	/**
